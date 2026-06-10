@@ -75,8 +75,9 @@
 (defn kill-ring-save
   "Copy region text to kill ring without deleting. Returns updated kill ring."
   [kr buf]
-  (when-let [region (b/region-text buf)]
-    (kill-text kr region)))
+  (if-let [region (b/region-text buf)]
+    (kill-text kr region)
+    kr))
 
 
 (defn yank-text

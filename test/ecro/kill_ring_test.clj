@@ -120,6 +120,15 @@
       (is (= "hello" (:text buf))))))
 
 
+(deftest test-kill-ring-save-no-region
+  (testing "kill-ring-save returns original kill ring when no region"
+    (let [buf (b/make-buffer "test")
+          kr (-> (kr/make-kill-ring)
+                 (kr/kill-text "existing"))
+          result (kr/kill-ring-save kr buf)]
+      (is (= "existing" (kr/yank result))))))
+
+
 (deftest test-yank-text
   (testing "yank-text inserts kill ring entry at point"
     (let [buf (-> (b/make-buffer "test")
