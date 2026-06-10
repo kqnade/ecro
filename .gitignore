@@ -1,3 +1,5 @@
 .cpcache/
 .clj-kondo/.cache/
 .nrepl-port
+.lsp/.cache/
+docs/def.json
