@@ -63,22 +63,10 @@ LeadKey + キー でコマンド実行：
 
 **設計方針**:
 - **M-Arrow**: Layer 2 と同じ位置（←↓↑→ に M-← M-↓ M-↑ M-→ を配置）
-- **その他**: Layer 0 のキー位置に Meta 修飾を付与（M-a, M-e, M-f, M-d 等）
+- **その他**: Layer 0 のキー位置に Meta 修飾を付与する方針
 - Alt 同時押し不要。LT3(TAB) ホールド + 通常キー位置で Meta コマンド実行
 
-```
-左上:  M-`       M-q       M-w       M-f       M-p       M-b       M-LALT
-左中:  M-TAB     M-a       M-r       M-s       M-t       M-g       M-LANG2
-左下:  M-LCTRL   M-z       M-x       M-c       M-d       M-v       -
-左親:  -         -         -         M-ESC     TRNS      M-SPC     -
-
-右上:  M-RALT    M-j       M-l       M-u       M-y       M-'       M-\
-右中:  M-LANG1   M-m       M-n       M-e       M-i       M-o       M-;
-右下:  -         M-k       M-h       M-,       M-.       M-/       M-RCTRL
-右親:  -         M-ENTER   M-BSPC    M-RGUI    -         -         -
-
-←↓↑→:  M-←       M-↓       M-↑       M-→
-```
+具体的なLayer 3配列は未確定。`def.json` 側の実配置が固まったら反映する。
 
 **M-Arrow 配置（Layer 2 と同じ位置）**:
 - `M-←` → `backward-word`
@@ -86,20 +74,15 @@ LeadKey + キー でコマンド実行：
 - `M-↑` → `backward-paragraph` / `beginning-of-buffer`
 - `M-↓` → `forward-paragraph` / `end-of-buffer`
 
-**主要 M-キー（Layer 0 位置準拠）**:
-- `M-a` → `move-beginning-of-line`
-- `M-e` → `move-end-of-line`
+**主要 M-キー候補（コマンド側の割り当て候補）**:
+- `M-f` / `M-→` → `forward-word`
+- `M-b` / `M-←` → `backward-word`
 - `M-d` → `kill-word`
 - `M-w` → `kill-ring-save` (copy)
 - `M-y` → `yank-pop`
 - `M-v` → `scroll-down-command`
-- `M-f` → `forward-word`
-- `M-b` → `backward-word`
 - `M-%` → `query-replace`
-- `M-<` → `beginning-of-buffer`
-- `M->` → `end-of-buffer`
-- `M-@` → `mark-word`
-- `M-SPC` → `just-one-space`
+- `M-<` / `M->` → buffer先頭/末尾
 
 ---
 

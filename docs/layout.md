@@ -93,17 +93,7 @@ layout[layer][row][column] = keycode
 
 元々は RGB 操作用レイヤーでしたが、リセットして空にしました。LT3(TAB) からアクセスできるため、ecro の拡張キー用に使用します。
 
-```text
-左上:  TRNS      NO        NO        NO        NO        NO        NO
-左中:  TRNS      RGB_HUI   RGB_SAI   RGB_VAI   RGB_TOG   NO        NO
-左下:  TRNS      RGB_HUD   RGB_SAD   RGB_VAD   RGB_MOD   NO        -
-左親:  -         -         -         LGUI      TRNS      SPACE     -
-
-右上:  NO        NO        NO        NO        NO        NO        NO
-右中:  NO        NO        NO        NO        NO        NO        NO
-右下:  NO        NO        NO        NO        NO        NO        -
-右親:  -         ENTER     TRNS      RGUI      -         -         -
-```
+現在の具体配置は未確定です。`def.json` 側で確定した配置を確認してから、この節に反映します。
 
 ### レイヤー 4
 
