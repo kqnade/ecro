@@ -144,6 +144,13 @@ pub extern "C" fn ecro_poll_event() -> *mut EcroEvent {
                         KeyCode::Esc => (27, 0),
                         KeyCode::Backspace => (127, 0),
                         KeyCode::Tab => (9, 0),
+                        KeyCode::Home => (1005, 0),
+                        KeyCode::End => (1006, 0),
+                        KeyCode::PageUp => (1007, 0),
+                        KeyCode::PageDown => (1008, 0),
+                        KeyCode::Insert => (1009, 0),
+                        KeyCode::Delete => (1010, 0),
+                        KeyCode::F(n) => (2000 + (n as i32), 0),
                         _ => (0, 0),
                     };
                     

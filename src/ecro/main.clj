@@ -95,6 +95,34 @@
     (= key-code 27)
     (assoc state :key-sequence [])
 
+    ;; Home
+    (= key-code 1005)
+    (update state :current-buffer core/move-beginning-of-line)
+
+    ;; End
+    (= key-code 1006)
+    (update state :current-buffer core/move-end-of-line)
+
+    ;; PageUp
+    (= key-code 1007)
+    state
+
+    ;; PageDown
+    (= key-code 1008)
+    state
+
+    ;; Insert
+    (= key-code 1009)
+    state
+
+    ;; Delete (forward delete)
+    (= key-code 1010)
+    (update state :current-buffer buffer/delete-char-forward)
+
+    ;; Function keys F1-F24
+    (>= key-code 2000)
+    state
+
     ;; Ctrl-C (3) - quit
     (= key-code 3)
     (assoc state :running false)
