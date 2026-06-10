@@ -70,3 +70,21 @@
         killed (subs text start end)
         new-text (str (subs text 0 start) (subs text end))]
     [(assoc buf :text new-text :point start) killed]))
+
+
+(defn kill-ring-save
+  "Copy region text to kill ring without deleting. Returns updated kill ring."
+  [buf]
+  (when-let [region (b/region-text buf)]
+    (kill-text buf region)))
+
+
+(defn yank-text
+  "Insert current kill ring entry at point. Returns updated buffer."
+  [buf kr]
+  (if-let [text (yank kr)]
+    (let [point (:point buf)
+          old-text (:text buf)
+          new-text (str (subs old-text 0 point) text (subs old-text point))]
+      (assoc buf :text new-text :point (+ point (count text))))
+    buf))

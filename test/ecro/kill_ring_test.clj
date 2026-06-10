@@ -95,9 +95,38 @@
 (deftest test-kill-ring-max
   (testing "kill ring respects max size"
     (let [kr (-> (kr/make-kill-ring 2)
-                 (kr/kill-text "one")
-                 (kr/kill-text "two")
-                 (kr/kill-text "three"))]
+                  (kr/kill-text "one")
+                  (kr/kill-text "two")
+                  (kr/kill-text "three"))]
       (is (= 2 (count (:entries kr))))
       (is (= "three" (first (:entries kr))))
       (is (= "two" (second (:entries kr)))))))
+
+
+(deftest test-kill-ring-save
+  (testing "kill-ring-save adds region text without modifying buffer"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \h)
+                  (b/insert-char \e)
+                  (b/insert-char \l)
+                  (b/insert-char \l)
+                  (b/insert-char \o)
+                  (b/set-mark)
+                  (b/move-point-backward))
+          kr (-> (kr/make-kill-ring)
+                 (kr/kill-ring-save buf))]
+      (is (= "hell" (b/region-text buf)))
+      (is (= "hell" (kr/yank kr)))
+      (is (= "hello" (:text buf))))))
+
+
+(deftest test-yank-text
+  (testing "yank-text inserts kill ring entry at point"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \h)
+                  (b/insert-char \i))
+          kr (-> (kr/make-kill-ring)
+                 (kr/kill-text " there"))
+          new-buf (kr/yank-text buf kr)]
+      (is (= "hi there" (:text new-buf)))
+      (is (= 8 (:point new-buf))))))
