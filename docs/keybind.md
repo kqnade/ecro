@@ -58,18 +58,26 @@ LeadKey + キー でコマンド実行：
 
 ### レイヤー3（Meta修飾）- LT3(TAB) 長押しで発動
 
-**Layer 0 + Meta 修飾キー用。**
+**Layer 0 + Meta 修飾キー。**
 
 旧 KC_TAB の位置（左手小指左横）を LT3(TAB) に変更したため、Layer 3 が利用可能に。
 
 **設計方針**:
-- Layer 3 はリセット済み・利用可能
 - Layer 0 の主要文字キー位置に Meta 修飾を付与
-- Layer 2 と同じ位置の矢印キーは Meta + Arrow として使う想定
 - 小指外側、親指、言語切替、Control などは `KC_NO` または透過
 - Alt 同時押し不要。LT3(TAB) ホールド + 通常キー位置で Meta コマンド実行
 
-具体配列は未確定。確定済みの物理配置は `docs/layout.md` を参照。
+```
+左上:  NO        M-q       M-w       M-f       M-p       M-b       NO
+左中:  TRNS      M-a       M-r       M-s       M-t       M-g       NO
+左下:  NO        M-z       M-x       M-c       M-d       M-v       -
+左親:  -         -         -         NO        NO        NO        -
+
+右上:  NO        M-j       M-l       M-u       M-y       M-'       NO
+右中:  NO        M-n       M-m       M-e       M-i       M-o       M-;
+右下:  -         M-k       M-h       M-,       M-.       M-/       NO
+右親:  -         NO        NO        NO        -         -         -
+```
 
 **主要 M-キー候補（コマンド側の割り当て候補）**:
 - `M-f` → `forward-word`
