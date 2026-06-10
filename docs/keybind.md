@@ -57,20 +57,49 @@ LeadKey + キー でコマンド実行：
 
 ### レイヤー3（ecro拡張）- LT3(TAB) 長押しで発動
 
-**リセット済み。自由にキー配置可能。**
+**Layer 0 + Meta 修飾キー。**
 
 旧 KC_TAB の位置（左手小指左横）を LT3(TAB) に変更したため、Layer 3 が利用可能に。
 
-Meta 系キー（M-Arrow, M-f, M-b 等）を配置する予定。従来の Alt 同時押しより打ちやすい。
+**設計方針**:
+- **M-Arrow**: Layer 2 と同じ位置（←↓↑→ に M-← M-↓ M-↑ M-→ を配置）
+- **その他**: Layer 0 のキー位置に Meta 修飾を付与（M-a, M-e, M-f, M-d 等）
+- Alt 同時押し不要。LT3(TAB) ホールド + 通常キー位置で Meta コマンド実行
 
-配置案（未確定）:
 ```
-左上:  C-l       M-f       M-b       M-d       M-@       M-w       -
-左中:  -         M-<       M->       M-{       M-}       -         -
-左下:  -         M-y       M-v       M-%       -         -         -
-...
-右中:  -         M-←       M-↓       M-↑       M-→       -         -
+左上:  M-`       M-q       M-w       M-f       M-p       M-b       M-LALT
+左中:  M-TAB     M-a       M-r       M-s       M-t       M-g       M-LANG2
+左下:  M-LCTRL   M-z       M-x       M-c       M-d       M-v       -
+左親:  -         -         -         M-ESC     TRNS      M-SPC     -
+
+右上:  M-RALT    M-j       M-l       M-u       M-y       M-'       M-\
+右中:  M-LANG1   M-m       M-n       M-e       M-i       M-o       M-;
+右下:  -         M-k       M-h       M-,       M-.       M-/       M-RCTRL
+右親:  -         M-ENTER   M-BSPC    M-RGUI    -         -         -
+
+←↓↑→:  M-←       M-↓       M-↑       M-→
 ```
+
+**M-Arrow 配置（Layer 2 と同じ位置）**:
+- `M-←` → `backward-word`
+- `M-→` → `forward-word`
+- `M-↑` → `backward-paragraph` / `beginning-of-buffer`
+- `M-↓` → `forward-paragraph` / `end-of-buffer`
+
+**主要 M-キー（Layer 0 位置準拠）**:
+- `M-a` → `move-beginning-of-line`
+- `M-e` → `move-end-of-line`
+- `M-d` → `kill-word`
+- `M-w` → `kill-ring-save` (copy)
+- `M-y` → `yank-pop`
+- `M-v` → `scroll-down-command`
+- `M-f` → `forward-word`
+- `M-b` → `backward-word`
+- `M-%` → `query-replace`
+- `M-<` → `beginning-of-buffer`
+- `M->` → `end-of-buffer`
+- `M-@` → `mark-word`
+- `M-SPC` → `just-one-space`
 
 ---
 
