@@ -1,0 +1,11 @@
+[parse]
+parse_deps = false
+
+[export]
+prefix = "ecro_"
+
+[fn]
+no_return = "void"
+
+[struct]
+rename_fields = "None"
