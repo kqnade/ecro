@@ -178,3 +178,15 @@
                                 (kr/kill-text " there"))}
           new-state (main/handle-key state 22 1)]
       (is (= "hi there" (:text (:current-buffer new-state)))))))
+
+
+(deftest test-esc-q-quit
+  (testing "ESC q quits the editor"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap main/default-keymap
+                 :key-sequence ["ESC"]
+                 :kill-ring (kr/make-kill-ring)
+                 :running true}
+          new-state (main/handle-key state 113 0)]
+      (is (not (:running new-state)))
+      (is (= [] (:key-sequence new-state))))))

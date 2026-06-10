@@ -33,6 +33,7 @@
         (keymap/define-key [lk "f"] :find-file)
         (keymap/define-key [lk "s"] :save-buffer)
         (keymap/define-key [lk "u"] :undo)
+        (keymap/define-key [lk "q"] :quit)
         (keymap/define-key [lk lk] :keyboard-quit))))
 
 
@@ -134,10 +135,11 @@
                            :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
                            :save-buffer [(file/save-buffer buf) kill-ring]
                            [buf kill-ring])]
-    (assoc state
-           :current-buffer new-buf
-           :kill-ring new-kr
-           :key-sequence [])))
+    (cond-> (assoc state
+                   :current-buffer new-buf
+                   :kill-ring new-kr
+                   :key-sequence [])
+      (= command :quit) (assoc :running false))))
 
 
 (defn render
