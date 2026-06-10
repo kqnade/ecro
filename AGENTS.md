@@ -33,6 +33,14 @@ script/build-native.sh
 3. Refactor if needed, commit as `refactor: …`
 4. Run lint before declaring done
 
+## Commit Granularity
+
+- Commit by implementation unit, not by broad feature bundle.
+- Keep each TDD cycle as small as possible: one behavior, one focused test, minimum implementation, CI/lint, then commit.
+- Do not combine independent implementations in one commit. For example, cut/copy/paste and Shift+Arrow selection are separate implementation units.
+- Do not start the next implementation unit until the current one has passing tests and has been committed.
+- If a change naturally splits into core model, command integration, and docs, commit each coherent unit separately after its relevant tests/checks pass.
+
 Test frameworks:
 - Rust: `cargo test`
 - Clojure: `clojure.test`
