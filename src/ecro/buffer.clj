@@ -9,6 +9,7 @@
    {:name name
     :text ""
     :point 0
+    :scroll-line 0
     :undo-stack []
     :redo-stack []
     :tab-width (get opts :tab-width 2)

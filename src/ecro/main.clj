@@ -5,6 +5,7 @@
     [ecro.file :as file]
     [ecro.keymap :as keymap]
     [ecro.native :as native]
+    [ecro.scroll :as scroll]
     [ecro.window :as window]))
 
 
@@ -63,19 +64,30 @@
       (print (str "\033[" (inc y) ";1H" new)))))
 
 
+(defn screen-line
+  "Return the exact rendered line stored in the diff buffer."
+  [line width tab-width]
+  (let [expanded (expand-tabs line tab-width)]
+    (subs (format (str "%-" width "s") expanded) 0 width)))
+
+
 (defn render
   "Render editor state with diff updates."
   [state]
   (let [[width height] (or (native/get-terminal-size) [80 24])
         buf (:current-buffer state)
+        tab-width (:tab-width buf 2)
+        scroll-line (:scroll-line buf 0)
         lines (clojure.string/split (or (:text buf) "") #"\n" -1)
-        visible-lines (take (- height 1) lines)
+        visible-lines (take (- height 1) (drop scroll-line lines))
         old-screen @screen-buffer]
     ;; Hide cursor
     (print "\033[?25l")
     ;; Update only changed lines
     (doseq [[idx line] (map-indexed vector visible-lines)]
-      (update-screen-line idx (get old-screen idx) line width))
+      (let [rendered (screen-line line width tab-width)]
+        (when (not= (get old-screen idx) rendered)
+          (print (str "\033[" (inc idx) ";1H" rendered)))))
     ;; Clear remaining lines if needed
     (doseq [idx (range (count visible-lines) (- height 1))]
       (update-screen-line idx (get old-screen idx) "" width))
@@ -95,11 +107,12 @@
           line-start (reduce + (map inc (take line-num lines)))
           col-in-line (- point line-start)
           line-prefix (subs line-text 0 (max 0 (min col-in-line (count line-text))))
-          visual-col (count (expand-tabs line-prefix 8))]
-      (print (str "\033[" (inc line-num) ";" (inc visual-col) "H\033[?25h")))
+          visual-col (count (expand-tabs line-prefix tab-width))
+          screen-row (- line-num scroll-line)]
+      (print (str "\033[" (inc (max 0 screen-row)) ";" (inc visual-col) "H\033[?25h")))
     (flush)
     ;; Update screen buffer
-    (reset! screen-buffer (mapv #(format (str "%-" width "s") %) visible-lines))))
+    (reset! screen-buffer (mapv #(screen-line % width tab-width) visible-lines))))
 
 
 (defn handle-key
@@ -132,11 +145,11 @@
 
     ;; PageUp
     (= key-code 1007)
-    state
+    (update state :current-buffer scroll/scroll-up 10)
 
     ;; PageDown
     (= key-code 1008)
-    state
+    (update state :current-buffer scroll/scroll-down 10)
 
     ;; Insert
     (= key-code 1009)
@@ -193,12 +206,14 @@
 (defn process-event
   "Process a terminal event."
   [state event]
-  (if event
-    (case (:type event)
-      :key (handle-key state (:key_code event) (:modifiers event))
-      :resize (do (reset! screen-buffer []) state)
-      state)
-    state))
+  (let [next-state (if event
+                     (case (:type event)
+                       :key (handle-key state (:key_code event) (:modifiers event))
+                       :resize (do (reset! screen-buffer []) state)
+                       state)
+                     state)
+        [_ height] (or (native/get-terminal-size) [80 24])]
+    (update next-state :current-buffer scroll/adjust-scroll-for-point (dec height))))
 
 
 (defn -main

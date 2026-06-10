@@ -101,6 +101,30 @@
       (is (= 3 (:point buf))))))
 
 
+(deftest test-default-tab-inserts-two-spaces
+  (testing "tab inserts two spaces by default"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-tab))]
+      (is (= "  " (:text buf)))
+      (is (= 2 (:point buf))))))
+
+
+(deftest test-configured-tab-width
+  (testing "tab width can be configured"
+    (let [buf (-> (b/make-buffer "test" {:tab-width 4})
+                  (b/insert-tab))]
+      (is (= "    " (:text buf)))
+      (is (= 4 (:point buf))))))
+
+
+(deftest test-indent-tabs-mode-inserts-tab-character
+  (testing "indent-tabs-mode inserts a literal tab"
+    (let [buf (-> (b/make-buffer "test" {:indent-tabs-mode true})
+                  (b/insert-tab))]
+      (is (= "\t" (:text buf)))
+      (is (= 1 (:point buf))))))
+
+
 ;; Undo/Redo tests
 (deftest test-undo-insert
   (testing "undo single character insert"
