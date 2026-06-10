@@ -67,9 +67,8 @@
   (let [start (min mark point)
         end (max mark point)
         text (:text buf)
-        killed (subs text start end)
-        new-text (str (subs text 0 start) (subs text end))]
-    [(assoc buf :text new-text :point start :mark nil) killed]))
+        killed (subs text start end)]
+    [(b/delete-text buf start end) killed]))
 
 
 (defn kill-ring-save

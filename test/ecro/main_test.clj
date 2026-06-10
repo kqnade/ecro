@@ -167,6 +167,30 @@
       (is (nil? (:mark (:current-buffer new-state)))))))
 
 
+(deftest test-kill-region-is-undoable
+  (testing "C-x cut can be undone with C-z"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \e)
+                                     (b/insert-char \l)
+                                     (b/insert-char \l)
+                                     (b/insert-char \o)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/set-mark)
+                                     (b/move-point-forward)
+                                     (b/move-point-forward))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          cut (main/handle-key state 24 1)
+          undone (main/handle-key cut 26 1)]
+      (is (= "heo" (:text (:current-buffer cut))))
+      (is (= "hello" (:text (:current-buffer undone))))
+      (is (= 4 (:point (:current-buffer undone)))))))
+
+
 (deftest test-kill-ring-save-copy-integration
   (testing "C-c copies selected region without deleting"
     (let [state {:current-buffer (-> (b/make-buffer "test")

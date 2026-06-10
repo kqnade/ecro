@@ -64,6 +64,18 @@
       buf)))
 
 
+(defn delete-text
+  "Delete text in range [start end). Records as single undo operation."
+  [buf start end]
+  (let [text (:text buf)
+        deleted (subs text start end)
+        new-text (str (subs text 0 start) (subs text end))]
+    (record-operation (assoc buf :text new-text :point start :mark nil)
+                      {:type :delete-text
+                       :text deleted
+                       :point start})))
+
+
 (defn delete-char-backward
   "Delete the character before the current point."
   [buf]
@@ -159,7 +171,14 @@
                       (assoc :text (str (subs text 0 op-point) ch (subs text op-point))
                              :point (inc op-point))
                       (update :undo-stack pop)
-                      (update :redo-stack conj op)))))
+                      (update :redo-stack conj op)))
+        :delete-text (let [op-point (:point op)
+                           txt (:text op)]
+                       (-> buf
+                           (assoc :text (str (subs text 0 op-point) txt (subs text op-point))
+                                  :point (+ op-point (count txt)))
+                           (update :undo-stack pop)
+                           (update :redo-stack conj op)))))
     buf))
 
 
@@ -190,7 +209,14 @@
                       (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
                              :point op-point)
                       (update :redo-stack pop)
-                      (update :undo-stack conj op)))))
+                      (update :undo-stack conj op)))
+        :delete-text (let [op-point (:point op)
+                           txt (:text op)]
+                       (-> buf
+                           (assoc :text (str (subs text 0 op-point) (subs text (+ op-point (count txt))))
+                                  :point op-point)
+                           (update :redo-stack pop)
+                           (update :undo-stack conj op)))))
     buf))
 
 
