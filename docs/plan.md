@@ -336,6 +336,28 @@ ecro/
 | 括弧・ブロックの対応付け | feat: bracket matching |
 | 自動インデント（改行時） | feat: auto-indent on newline |
 
+### Phase 16: SKK integration
+**目標**: 日本語入力（SKK方式）をエディタに統合
+
+**設計方針**:
+- エディタコア（Clojure）が入力状態を管理し、Rust側は未変換のraw key eventを渡す
+- SKKはミニバッファー並の入力モードとして実装（global minor mode相当）
+- 辞書はEDNまたは独自バイナリ形式で管理。ユーザー辞書は `~/.ecro/skk/` に配置
+- 変換候補のポップアップは、既存のミニバッファー機構を流用または簡易overlayで実装
+
+| テスト | コミット |
+|-------|---------|
+| SKKモードをtoggleできる | feat: skk minor mode |
+| アルファベット入力をかなに変換できる | feat: skk romaji-to-kana |
+| スペースで変換候補を順に巡回できる | feat: skk candidate cycle |
+| Enterで確定、C-gでキャンセルできる | feat: skk confirm/cancel |
+| ユーザー辞書を読み込める | feat: skk user dictionary |
+| 辞書に単語を登録できる | feat: skk dictionary registration |
+| 送り仮名（おくりがな）を区別して変換できる | feat: skk okurigana handling |
+| 変換候補のポップアップを表示できる | feat: skk candidate popup |
+| 全角・半角記号の切り替え | feat: skk zenkaku mode |
+| SKK状態をステータスラインに表示 | feat: skk status indicator |
+
 ## TDD & コミット戦略
 
 ### テストフレームワーク
