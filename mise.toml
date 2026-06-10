@@ -1,6 +1,7 @@
 [tools]
 cljstyle = "latest"
 clojure = "latest"
+graalvm = "latest"
 java = "latest"
 rust = "latest"
 rust-analyzer = "latest"
