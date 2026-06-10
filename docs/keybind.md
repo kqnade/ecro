@@ -100,6 +100,7 @@ LeadKey + キー でコマンド実行：
 | `↓` | `next-line` | ✅ |
 | `↑` | `previous-line` | ✅ |
 | `→` | `forward-char` | ✅ |
+| `Shift+←↓↑→` | リージョン選択 | ✅ |
 | `HOME` | `move-beginning-of-line` | ✅ |
 | `END` | `move-end-of-line` | ✅ |
 | `C-a` | `move-beginning-of-line` | ✅ |
@@ -128,9 +129,9 @@ LeadKey + キー でコマンド実行：
 | `TAB` | `insert-tab` (space/tab configurable) | ✅ |
 | `C-k` | `kill-line` | ✅ |
 | `C-d` | `delete-char-forward` | ❌ |
-| `C-x` | `kill-region` (カット) | ❌ |
-| `C-c` | `kill-ring-save` (コピー) | ❌ |
-| `C-v` | `yank` (ペースト) | ❌ |
+| `C-x` | `kill-region` (カット) | ✅ |
+| `C-c` | `kill-ring-save` (コピー) | ✅ |
+| `C-v` | `yank` (ペースト) | ✅ |
 | `M-y` | `yank-pop` (cycle kill-ring) | ❌ |
 
 ### Undo/Redo
@@ -197,6 +198,7 @@ LeadKey + キー でコマンド実行：
 | キー | コマンド | 実装 |
 |------|---------|------|
 | `C-g` / `ESC` | `keyboard-quit` | ✅ |
+| `ESC q` | エディタ終了 | ✅ |
 | `C-c C-c` | エディタ終了 | ❌ |
 | `C-l` | `recenter-top-bottom` | ❌ |
 | `F1`-`F24` | (将来的に割当) | ✅（認識のみ） |
