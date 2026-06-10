@@ -46,6 +46,28 @@
       buf)))
 
 
+(defn delete-char-backward
+  "Delete the character before the current point."
+  [buf]
+  (let [point (:point buf)]
+    (if (> point 0)
+      (let [text (:text buf)
+            deleted-char (get text (dec point))
+            new-buf (assoc buf
+                           :text (str (subs text 0 (dec point)) (subs text point))
+                           :point (dec point))]
+        (record-operation new-buf {:type :delete
+                                   :char deleted-char
+                                   :point (dec point)}))
+      buf)))
+
+
+(defn insert-newline
+  "Insert a newline at the current point."
+  [buf]
+  (insert-char buf \newline))
+
+
 (defn move-point-forward
   "Move point forward by one character if not at end."
   [buf]

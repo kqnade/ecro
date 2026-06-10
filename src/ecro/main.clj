@@ -78,37 +78,61 @@
 (defn handle-key
   "Handle a key event and return updated state."
   [state key-code modifiers]
-  (let [key-str (if (< key-code 32)
-                  (str "C-" (char (+ key-code 96)))
-                  (str (char key-code)))
-        new-seq (conj (:key-sequence state) key-str)
-        result (keymap/lookup-key (:keymap state) new-seq)]
-    (cond
-      (= result :prefix)
-      (assoc state :key-sequence new-seq)
+  (cond
+    ;; Backspace (DEL)
+    (= key-code 127)
+    (update state :current-buffer buffer/delete-char-backward)
 
-      (nil? result)
-      (if (and (empty? (:key-sequence state)) (>= key-code 32) (< key-code 127))
-        ;; Regular character input
-        (update state :current-buffer buffer/insert-char (char key-code))
-        (assoc state :key-sequence []))
+    ;; Enter (RET) - insert newline
+    (= key-code 13)
+    (update state :current-buffer buffer/insert-newline)
 
-      :else
-      (let [buf (:current-buffer state)
-            new-buf (case result
-                      :forward-char (core/forward-char buf)
-                      :backward-char (core/backward-char buf)
-                      :next-line (core/next-line buf)
-                      :previous-line (core/previous-line buf)
-                      :move-beginning-of-line (core/move-beginning-of-line buf)
-                      :move-end-of-line (core/move-end-of-line buf)
-                      :kill-line (core/kill-line buf)
-                      :find-file (file/find-file "/tmp/ecro_test.txt")
-                      :save-buffer (file/save-buffer buf)
-                      buf)]
-        (assoc state
-               :current-buffer new-buf
-               :key-sequence [])))))
+    ;; Tab
+    (= key-code 9)
+    (update state :current-buffer buffer/insert-char \tab)
+
+    ;; Escape - cancel prefix
+    (= key-code 27)
+    (assoc state :key-sequence [])
+
+    ;; Ctrl-C (3) - quit
+    (= key-code 3)
+    (assoc state :running false)
+
+    :else
+    (let [key-str (if (< key-code 32)
+                    (str "C-" (char (+ key-code 96)))
+                    (str (char key-code)))
+          new-seq (conj (:key-sequence state) key-str)
+          result (keymap/lookup-key (:keymap state) new-seq)]
+      (cond
+        (= result :prefix)
+        (assoc state :key-sequence new-seq)
+
+        (nil? result)
+        (if (and (empty? (:key-sequence state))
+                 (>= key-code 32)
+                 (< key-code 127))
+          ;; Regular character input
+          (update state :current-buffer buffer/insert-char (char key-code))
+          (assoc state :key-sequence []))
+
+        :else
+        (let [buf (:current-buffer state)
+              new-buf (case result
+                        :forward-char (core/forward-char buf)
+                        :backward-char (core/backward-char buf)
+                        :next-line (core/next-line buf)
+                        :previous-line (core/previous-line buf)
+                        :move-beginning-of-line (core/move-beginning-of-line buf)
+                        :move-end-of-line (core/move-end-of-line buf)
+                        :kill-line (core/kill-line buf)
+                        :find-file (file/find-file "/tmp/ecro_test.txt")
+                        :save-buffer (file/save-buffer buf)
+                        buf)]
+          (assoc state
+                 :current-buffer new-buf
+                 :key-sequence []))))))
 
 
 (defn process-event
