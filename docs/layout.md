@@ -44,9 +44,9 @@ layout[layer][row][column] = keycode
 
 ```text
 左上:  KC_GRAVE  KC_Q      KC_W      KC_F      KC_P      KC_B      KC_LALT
-左中:  KC_TAB    KC_A      KC_R      KC_S      KC_T      KC_G      KC_LANG2
+左中:  LT3(TAB)  KC_A      KC_R      KC_S      KC_T      KC_G      KC_LANG2
 左下:  KC_LCTRL  KC_Z      KC_X      KC_C      KC_D      KC_V      -
-左親:  -         -         -         KC_ESCAPE LT2(TAB)  LSFT_T(SPACE) -
+左親:  -         -         -         KC_ESCAPE LT3(TAB)  LSFT_T(SPACE) -
 
 右上:  KC_RALT   KC_J      KC_L      KC_U      KC_Y      KC_QUOTE  KC_BSLASH
 右中:  KC_LANG1  KC_M      KC_N      KC_E      KC_I      KC_O      KC_SCOLON
@@ -89,7 +89,9 @@ layout[layer][row][column] = keycode
 
 ### レイヤー 3
 
-RGB 操作用のレイヤーです。左手側に RGB Hue/Saturation/Value/Toggle/Mode が割り当てられ、その他はほぼ `KC_NO` です。
+**リセット済み - 自由にキー配置可能。**
+
+元々は RGB 操作用レイヤーでしたが、リセットして空にしました。LT3(TAB) からアクセスできるため、ecro の拡張キー用に使用します。
 
 ```text
 左上:  TRNS      NO        NO        NO        NO        NO        NO
