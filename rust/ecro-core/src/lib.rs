@@ -58,7 +58,7 @@ pub extern "C" fn ecro_disable_raw_mode() -> i32 {
 pub extern "C" fn ecro_enter_alternate_screen() -> i32 {
     use crossterm::ExecutableCommand;
     use std::io::stdout;
-    
+
     match stdout().execute(crossterm::terminal::EnterAlternateScreen) {
         Ok(_) => {
             if let Ok(mut state) = TERMINAL_STATE.lock() {
@@ -74,7 +74,7 @@ pub extern "C" fn ecro_enter_alternate_screen() -> i32 {
 pub extern "C" fn ecro_leave_alternate_screen() -> i32 {
     use crossterm::ExecutableCommand;
     use std::io::stdout;
-    
+
     match stdout().execute(crossterm::terminal::LeaveAlternateScreen) {
         Ok(_) => {
             if let Ok(mut state) = TERMINAL_STATE.lock() {
@@ -87,12 +87,15 @@ pub extern "C" fn ecro_leave_alternate_screen() -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ecro_get_terminal_size(width: *mut u16, height: *mut u16) -> i32 {
+/// # Safety
+///
+/// `width` and `height` must be valid writable pointers to `i32` values.
+pub unsafe extern "C" fn ecro_get_terminal_size(width: *mut i32, height: *mut i32) -> i32 {
     match crossterm::terminal::size() {
         Ok((w, h)) => {
             unsafe {
-                *width = w;
-                *height = h;
+                *width = w as i32;
+                *height = h as i32;
             }
             0
         }
@@ -111,109 +114,110 @@ pub struct EcroEvent {
 const EVENT_KEY: i32 = 1;
 const EVENT_RESIZE: i32 = 2;
 
+const MOD_CONTROL: i32 = 1;
+const MOD_ALT: i32 = 2;
+const MOD_SHIFT: i32 = 4;
+
+fn encode_modifiers(modifiers: crossterm::event::KeyModifiers) -> i32 {
+    let mut result = 0;
+    if modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
+        result |= MOD_CONTROL;
+    }
+    if modifiers.contains(crossterm::event::KeyModifiers::ALT) {
+        result |= MOD_ALT;
+    }
+    if modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
+        result |= MOD_SHIFT;
+    }
+    result
+}
+
+fn encode_key_event(key_event: crossterm::event::KeyEvent) -> (i32, i32) {
+    use crossterm::event::KeyCode;
+
+    let modifiers = encode_modifiers(key_event.modifiers);
+    let code = match key_event.code {
+        KeyCode::Char(c) => {
+            if key_event
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
+            {
+                match c {
+                    '/' => 31,
+                    _ => (c as u8 & 0x1f) as i32,
+                }
+            } else {
+                c as i32
+            }
+        }
+        KeyCode::Up => 1001,
+        KeyCode::Down => 1002,
+        KeyCode::Left => 1003,
+        KeyCode::Right => 1004,
+        KeyCode::Enter => 13,
+        KeyCode::Esc => 27,
+        KeyCode::Backspace => 127,
+        KeyCode::Tab => 9,
+        KeyCode::Home => 1005,
+        KeyCode::End => 1006,
+        KeyCode::PageUp => 1007,
+        KeyCode::PageDown => 1008,
+        KeyCode::Insert => 1009,
+        KeyCode::Delete => 1010,
+        KeyCode::F(n) => 2000 + (n as i32),
+        _ => 0,
+    };
+
+    (code, modifiers)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn ecro_poll_event() -> *mut EcroEvent {
-    use crossterm::event::{poll, read, Event, KeyCode, KeyModifiers};
+    use crossterm::event::{Event, poll, read};
     use std::time::Duration;
 
     match poll(Duration::from_millis(10)) {
-        Ok(true) => {
-            match read() {
-                Ok(Event::Key(key_event)) => {
-                    let (code, modifiers) = match key_event.code {
-                        KeyCode::Char(c) => {
-                            let key_code = if key_event.modifiers.contains(KeyModifiers::CONTROL) {
-                                // Ctrl+key returns control code (1-26)
-                                (c as u8 & 0x1f) as i32
-                            } else {
-                                c as i32
-                            };
-                            let mods = if key_event.modifiers.contains(KeyModifiers::ALT) {
-                                2
-                            } else {
-                                0
-                            };
-                            (key_code, mods)
-                        }
-                        KeyCode::Up => (1001, 0),
-                        KeyCode::Down => (1002, 0),
-                        KeyCode::Left => (1003, 0),
-                        KeyCode::Right => (1004, 0),
-                        KeyCode::Enter => (13, 0),
-                        KeyCode::Esc => (27, 0),
-                        KeyCode::Backspace => (127, 0),
-                        KeyCode::Tab => (9, 0),
-                        KeyCode::Home => (1005, 0),
-                        KeyCode::End => (1006, 0),
-                        KeyCode::PageUp => (1007, 0),
-                        KeyCode::PageDown => (1008, 0),
-                        KeyCode::Insert => (1009, 0),
-                        KeyCode::Delete => (1010, 0),
-                        KeyCode::F(n) => (2000 + (n as i32), 0),
-                        _ => (0, 0),
-                    };
-                    
-                    let event = EcroEvent {
-                        event_type: EVENT_KEY,
-                        key_code: code,
-                        modifiers,
-                    };
-                    
-                    Box::into_raw(Box::new(event))
-                }
-                Ok(Event::Resize(w, h)) => {
-                    let event = EcroEvent {
-                        event_type: EVENT_RESIZE,
-                        key_code: w as i32,
-                        modifiers: h as i32,
-                    };
-                    
-                    Box::into_raw(Box::new(event))
-                }
-                _ => std::ptr::null_mut(),
+        Ok(true) => match read() {
+            Ok(Event::Key(key_event)) => {
+                let (code, modifiers) = encode_key_event(key_event);
+
+                let event = EcroEvent {
+                    event_type: EVENT_KEY,
+                    key_code: code,
+                    modifiers,
+                };
+
+                Box::into_raw(Box::new(event))
             }
-        }
+            Ok(Event::Resize(w, h)) => {
+                let event = EcroEvent {
+                    event_type: EVENT_RESIZE,
+                    key_code: w as i32,
+                    modifiers: h as i32,
+                };
+
+                Box::into_raw(Box::new(event))
+            }
+            _ => std::ptr::null_mut(),
+        },
         _ => std::ptr::null_mut(),
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ecro_read_event() -> *mut EcroEvent {
-    use crossterm::event::{read, Event, KeyCode, KeyModifiers};
+    use crossterm::event::{Event, read};
 
     match read() {
         Ok(Event::Key(key_event)) => {
-            let (code, modifiers) = match key_event.code {
-                KeyCode::Char(c) => {
-                    let key_code = if key_event.modifiers.contains(KeyModifiers::CONTROL) {
-                        (c as u8 & 0x1f) as i32
-                    } else {
-                        c as i32
-                    };
-                    let mods = if key_event.modifiers.contains(KeyModifiers::ALT) {
-                        2
-                    } else {
-                        0
-                    };
-                    (key_code, mods)
-                }
-                KeyCode::Up => (1001, 0),
-                KeyCode::Down => (1002, 0),
-                KeyCode::Left => (1003, 0),
-                KeyCode::Right => (1004, 0),
-                KeyCode::Enter => (13, 0),
-                KeyCode::Esc => (27, 0),
-                KeyCode::Backspace => (127, 0),
-                KeyCode::Tab => (9, 0),
-                _ => (0, 0),
-            };
-            
+            let (code, modifiers) = encode_key_event(key_event);
+
             let event = EcroEvent {
                 event_type: EVENT_KEY,
                 key_code: code,
                 modifiers,
             };
-            
+
             Box::into_raw(Box::new(event))
         }
         Ok(Event::Resize(w, h)) => {
@@ -222,7 +226,7 @@ pub extern "C" fn ecro_read_event() -> *mut EcroEvent {
                 key_code: w as i32,
                 modifiers: h as i32,
             };
-            
+
             Box::into_raw(Box::new(event))
         }
         _ => std::ptr::null_mut(),
@@ -230,7 +234,10 @@ pub extern "C" fn ecro_read_event() -> *mut EcroEvent {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ecro_free_event(event: *mut EcroEvent) {
+/// # Safety
+///
+/// `event` must be either null or a pointer returned by `ecro_poll_event` or `ecro_read_event`.
+pub unsafe extern "C" fn ecro_free_event(event: *mut EcroEvent) {
     if !event.is_null() {
         unsafe {
             let _ = Box::from_raw(event);
@@ -241,6 +248,7 @@ pub extern "C" fn ecro_free_event(event: *mut EcroEvent) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     #[test]
     fn test_ecro_init_returns_zero() {
@@ -256,11 +264,30 @@ mod tests {
 
     #[test]
     fn test_terminal_size() {
-        let mut width: u16 = 0;
-        let mut height: u16 = 0;
-        let result = ecro_get_terminal_size(&mut width, &mut height);
+        let mut width: i32 = 0;
+        let mut height: i32 = 0;
+        let result = unsafe { ecro_get_terminal_size(&mut width, &mut height) };
         assert_eq!(result, 0);
         assert!(width > 0);
         assert!(height > 0);
+    }
+
+    #[test]
+    fn test_encode_control_slash() {
+        let event = KeyEvent::new(KeyCode::Char('/'), KeyModifiers::CONTROL);
+        let (code, modifiers) = encode_key_event(event);
+        assert_eq!(code, 31);
+        assert_eq!(modifiers, MOD_CONTROL);
+    }
+
+    #[test]
+    fn test_encode_control_shift_z() {
+        let event = KeyEvent::new(
+            KeyCode::Char('Z'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
+        let (code, modifiers) = encode_key_event(event);
+        assert_eq!(code, 26);
+        assert_eq!(modifiers, MOD_CONTROL | MOD_SHIFT);
     }
 }
