@@ -1,5 +1,6 @@
 (ns ecro.buffer)
 
+
 (defn make-buffer
   "Create a new buffer with the given name."
   [name]
@@ -9,12 +10,14 @@
    :undo-stack []
    :redo-stack []})
 
+
 (defn- record-operation
   "Record an operation onto the undo stack and clear redo stack."
   [buf op]
   (-> buf
       (update :undo-stack conj op)
       (assoc :redo-stack [])))
+
 
 (defn insert-char
   "Insert a character at the current point and advance point."
@@ -25,8 +28,9 @@
                        :text (str (subs text 0 point) ch (subs text point))
                        :point (inc point))]
     (record-operation new-buf {:type :insert
-                                :char ch
-                                :point point})))
+                               :char ch
+                               :point point})))
+
 
 (defn delete-char-forward
   "Delete the character at the current point."
@@ -37,9 +41,10 @@
       (let [deleted-char (get text point)
             new-buf (assoc buf :text (str (subs text 0 point) (subs text (inc point))))]
         (record-operation new-buf {:type :delete
-                                    :char deleted-char
-                                    :point point}))
+                                   :char deleted-char
+                                   :point point}))
       buf)))
+
 
 (defn move-point-forward
   "Move point forward by one character if not at end."
@@ -50,6 +55,7 @@
       (assoc buf :point (inc point))
       buf)))
 
+
 (defn move-point-backward
   "Move point backward by one character if not at beginning."
   [buf]
@@ -58,6 +64,7 @@
       (assoc buf :point (dec point))
       buf)))
 
+
 (defn point-to-line-column
   "Convert a point (0-indexed character position) to [line column]."
   [buf point]
@@ -65,6 +72,7 @@
         lines (clojure.string/split (subs text 0 point) #"\n" -1)]
     [(dec (count lines))
      (count (last lines))]))
+
 
 (defn undo
   "Undo the last operation."
@@ -88,6 +96,7 @@
                       (update :undo-stack pop)
                       (update :redo-stack conj op)))))
     buf))
+
 
 (defn redo
   "Redo the last undone operation."

@@ -1,5 +1,7 @@
 (ns ecro.core
-  (:require [ecro.buffer :as b]))
+  (:require
+    [ecro.buffer :as b]))
+
 
 ;; Emacs basic commands
 
@@ -8,10 +10,12 @@
   [buf]
   (b/move-point-forward buf))
 
+
 (defn backward-char
   "Move point backward one character (C-b)."
   [buf]
   (b/move-point-backward buf))
+
 
 (defn next-line
   "Move point to the next line (C-n)."
@@ -30,6 +34,7 @@
         (assoc buf :point (+ new-point target-col)))
       buf)))
 
+
 (defn previous-line
   "Move point to the previous line (C-p)."
   [buf]
@@ -47,6 +52,7 @@
         (assoc buf :point (+ new-point target-col)))
       buf)))
 
+
 (defn move-beginning-of-line
   "Move point to beginning of current line (C-a)."
   [buf]
@@ -56,6 +62,7 @@
         line-col (b/point-to-line-column buf point)
         line-idx (first line-col)]
     (assoc buf :point (reduce + (map inc (take line-idx lines))))))
+
 
 (defn move-end-of-line
   "Move point to end of current line (C-e)."
@@ -67,6 +74,7 @@
         line-idx (first line-col)
         line-text (nth lines line-idx)]
     (assoc buf :point (+ (reduce + (map inc (take line-idx lines))) (count line-text)))))
+
 
 (defn kill-line
   "Kill from point to end of line (C-k)."

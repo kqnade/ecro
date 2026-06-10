@@ -1,7 +1,9 @@
 (ns ecro.file-test
-  (:require [clojure.test :refer :all]
-            [ecro.file :as f]
-            [clojure.java.io :as io]))
+  (:require
+    [clojure.java.io :as io]
+    [clojure.test :refer :all]
+    [ecro.file :as f]))
+
 
 (deftest test-read-file
   (testing "reading a file into a buffer"
@@ -13,6 +15,7 @@
           (is (= test-file (:filepath buf))))
         (finally
           (io/delete-file test-file true))))))
+
 
 (deftest test-write-file
   (testing "writing a buffer to a file"
@@ -26,6 +29,7 @@
         (finally
           (io/delete-file test-file true))))))
 
+
 (deftest test-find-file-command
   (testing "find-file creates a buffer from file"
     (let [test-file (str (System/getProperty "java.io.tmpdir") "/ecro_test_" (System/currentTimeMillis) ".txt")]
@@ -36,6 +40,7 @@
           (is (= test-file (:filepath result))))
         (finally
           (io/delete-file test-file true))))))
+
 
 (deftest test-save-buffer-command
   (testing "save-buffer writes buffer to its filepath"
@@ -49,10 +54,12 @@
         (finally
           (io/delete-file test-file true))))))
 
+
 (deftest test-read-nonexistent-file
   (testing "reading nonexistent file creates empty buffer"
     (let [buf (f/read-file "/tmp/nonexistent_ecro_file.txt")]
       (is (= "" (:text buf))))))
+
 
 (deftest test-write-buffer-without-path
   (testing "writing buffer without filepath returns nil"

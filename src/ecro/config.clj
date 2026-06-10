@@ -1,6 +1,8 @@
 (ns ecro.config
-  (:require [clojure.edn :as edn]
-            [clojure.java.io :as io]))
+  (:require
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]))
+
 
 (defn load-config
   "Load configuration from an EDN file. Returns empty map if file doesn't exist."
@@ -14,10 +16,12 @@
           {}))
       {})))
 
+
 (defn merge-config
   "Merge config into editor state."
   [state config]
   (merge state config))
+
 
 (defn default-config
   "Return default configuration."

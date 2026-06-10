@@ -1,5 +1,7 @@
 (ns ecro.window
-  (:require [ecro.buffer :as b]))
+  (:require
+    [ecro.buffer :as b]))
+
 
 (defn make-window
   "Create a new window with a buffer."
@@ -14,6 +16,7 @@
     :height height
     :parent nil}))
 
+
 (defn- make-container
   "Create a container window for splits."
   [direction children width height]
@@ -23,6 +26,7 @@
    :width width
    :height height})
 
+
 (defn make-frame
   "Create a new frame with a root window."
   ([root-window]
@@ -31,6 +35,7 @@
    {:width width
     :height height
     :root-window root-window}))
+
 
 (defn- update-window-positions
   "Update positions of all windows in a tree."
@@ -42,12 +47,13 @@
           total-size (if (= :vertical direction) (:width window) (:height window))
           child-size (/ total-size (count children))
           updated-children (map-indexed
-                           (fn [idx child]
-                             (if (= :vertical direction)
-                               (update-window-positions child top (+ left (* idx child-size)))
-                               (update-window-positions child (+ top (* idx child-size)) left)))
-                           children)]
+                             (fn [idx child]
+                               (if (= :vertical direction)
+                                 (update-window-positions child top (+ left (* idx child-size)))
+                                 (update-window-positions child (+ top (* idx child-size)) left)))
+                             children)]
       (assoc window :children updated-children))))
+
 
 (defn split-window-vertical
   "Split a window vertically (side by side)."
@@ -61,6 +67,7 @@
       (make-frame (update-window-positions container 0 0) (:width frame) (:height frame))
       frame)))
 
+
 (defn split-window-horizontal
   "Split a window horizontally (stacked)."
   [frame window]
@@ -73,6 +80,7 @@
       (make-frame (update-window-positions container 0 0) (:width frame) (:height frame))
       frame)))
 
+
 (defn- collect-windows
   "Collect all leaf windows from a window tree."
   [window]
@@ -80,10 +88,12 @@
     [window]
     (mapcat collect-windows (:children window))))
 
+
 (defn get-windows
   "Get all leaf windows in a frame."
   [frame]
   (collect-windows (:root-window frame)))
+
 
 (defn next-window
   "Get the next window in the frame."
@@ -94,6 +104,7 @@
       (nth wins (inc idx))
       (first wins))))
 
+
 (defn prev-window
   "Get the previous window in the frame."
   [frame window]
@@ -102,6 +113,7 @@
     (if (> idx 0)
       (nth wins (dec idx))
       (last wins))))
+
 
 (defn resize-frame
   "Resize a frame and its root window."

@@ -172,6 +172,58 @@ pub extern "C" fn ecro_poll_event() -> *mut EcroEvent {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn ecro_read_event() -> *mut EcroEvent {
+    use crossterm::event::{read, Event, KeyCode, KeyModifiers};
+
+    match read() {
+        Ok(Event::Key(key_event)) => {
+            let (code, modifiers) = match key_event.code {
+                KeyCode::Char(c) => {
+                    let key_code = if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+                        (c as u8 & 0x1f) as i32
+                    } else {
+                        c as i32
+                    };
+                    let mods = if key_event.modifiers.contains(KeyModifiers::ALT) {
+                        2
+                    } else {
+                        0
+                    };
+                    (key_code, mods)
+                }
+                KeyCode::Up => (1001, 0),
+                KeyCode::Down => (1002, 0),
+                KeyCode::Left => (1003, 0),
+                KeyCode::Right => (1004, 0),
+                KeyCode::Enter => (13, 0),
+                KeyCode::Esc => (27, 0),
+                KeyCode::Backspace => (127, 0),
+                KeyCode::Tab => (9, 0),
+                _ => (0, 0),
+            };
+            
+            let event = EcroEvent {
+                event_type: EVENT_KEY,
+                key_code: code,
+                modifiers,
+            };
+            
+            Box::into_raw(Box::new(event))
+        }
+        Ok(Event::Resize(w, h)) => {
+            let event = EcroEvent {
+                event_type: EVENT_RESIZE,
+                key_code: w as i32,
+                modifiers: h as i32,
+            };
+            
+            Box::into_raw(Box::new(event))
+        }
+        _ => std::ptr::null_mut(),
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn ecro_free_event(event: *mut EcroEvent) {
     if !event.is_null() {
         unsafe {

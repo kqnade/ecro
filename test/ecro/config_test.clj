@@ -1,6 +1,8 @@
 (ns ecro.config-test
-  (:require [clojure.test :refer :all]
-            [ecro.config :as cfg]))
+  (:require
+    [clojure.test :refer :all]
+    [ecro.config :as cfg]))
+
 
 (deftest test-load-config
   (testing "loading valid EDN config"
@@ -16,10 +18,12 @@
         (finally
           (clojure.java.io/delete-file test-file true))))))
 
+
 (deftest test-load-nonexistent-config
   (testing "loading nonexistent config returns empty map"
     (let [loaded (cfg/load-config "/tmp/nonexistent_ecro_config.edn")]
       (is (= {} loaded)))))
+
 
 (deftest test-merge-config
   (testing "merging config into editor state"
@@ -28,6 +32,7 @@
           merged (cfg/merge-config state config)]
       (is (= :dark (:theme merged)))
       (is (= :find-file (get-in merged [:keymap "C-x C-f"]))))))
+
 
 (deftest test-default-config
   (testing "default config has expected keys"
