@@ -84,8 +84,5 @@
   "Insert current kill ring entry at point. Returns updated buffer."
   [buf kr]
   (if-let [text (yank kr)]
-    (let [point (:point buf)
-          old-text (:text buf)
-          new-text (str (subs old-text 0 point) text (subs old-text point))]
-      (assoc buf :text new-text :point (+ point (count text))))
+    (b/insert-text buf text)
     buf))

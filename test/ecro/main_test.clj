@@ -202,6 +202,22 @@
       (is (= "hi there" (:text (:current-buffer new-state)))))))
 
 
+(deftest test-yank-is-undoable
+  (testing "C-v yank can be undone with C-z"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \i))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (-> (kr/make-kill-ring)
+                                (kr/kill-text " there"))}
+          yanked (main/handle-key state 22 1)
+          undone (main/handle-key yanked 26 1)]
+      (is (= "hi there" (:text (:current-buffer yanked))))
+      (is (= "hi" (:text (:current-buffer undone))))
+      (is (= 2 (:point (:current-buffer undone)))))))
+
+
 (deftest test-esc-q-quit
   (testing "ESC q quits the editor"
     (let [state {:current-buffer (b/make-buffer "test")

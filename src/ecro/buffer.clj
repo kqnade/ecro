@@ -38,6 +38,18 @@
                                :point point})))
 
 
+(defn insert-text
+  "Insert text at current point and advance point. Records as single undo operation."
+  [buf text]
+  (let [point (:point buf)
+        old-text (:text buf)
+        new-text (str (subs old-text 0 point) text (subs old-text point))]
+    (record-operation (assoc buf :text new-text :point (+ point (count text)))
+                      {:type :insert-text
+                       :text text
+                       :point point})))
+
+
 (defn delete-char-forward
   "Delete the character at the current point."
   [buf]
@@ -134,6 +146,13 @@
                              :point op-point)
                       (update :undo-stack pop)
                       (update :redo-stack conj op)))
+        :insert-text (let [op-point (:point op)
+                           txt (:text op)]
+                       (-> buf
+                           (assoc :text (str (subs text 0 op-point) (subs text (+ op-point (count txt))))
+                                  :point op-point)
+                           (update :undo-stack pop)
+                           (update :redo-stack conj op)))
         :delete (let [op-point (:point op)
                       ch (:char op)]
                   (-> buf
@@ -159,6 +178,13 @@
                              :point (inc op-point))
                       (update :redo-stack pop)
                       (update :undo-stack conj op)))
+        :insert-text (let [op-point (:point op)
+                           txt (:text op)]
+                       (-> buf
+                           (assoc :text (str (subs text 0 op-point) txt (subs text op-point))
+                                  :point (+ op-point (count txt)))
+                           (update :redo-stack pop)
+                           (update :undo-stack conj op)))
         :delete (let [op-point (:point op)]
                   (-> buf
                       (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
