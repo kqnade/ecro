@@ -88,3 +88,63 @@
                   (b/insert-char \b))]
       (is (= "a\nb" (:text buf)))
       (is (= 3 (:point buf))))))
+
+;; Undo/Redo tests
+(deftest test-undo-insert
+  (testing "undo single character insert"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/undo))]
+      (is (= "" (:text buf)))
+      (is (= 0 (:point buf))))))
+
+(deftest test-undo-multiple-inserts
+  (testing "undo multiple inserts"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/insert-char \b)
+                  (b/insert-char \c)
+                  (b/undo))]
+      (is (= "ab" (:text buf)))
+      (is (= 2 (:point buf))))))
+
+(deftest test-redo-insert
+  (testing "redo after undo restores text"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/undo)
+                  (b/redo))]
+      (is (= "a" (:text buf)))
+      (is (= 1 (:point buf))))))
+
+(deftest test-undo-delete
+  (testing "undo delete restores deleted character"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/insert-char \b)
+                  (b/move-point-backward)
+                  (b/delete-char-forward)
+                  (b/undo))]
+      (is (= "ab" (:text buf)))
+      (is (= 2 (:point buf))))))
+
+(deftest test-undo-stack-boundary
+  (testing "undo at empty stack does nothing"
+    (let [buf (b/make-buffer "test")]
+      (is (= buf (b/undo buf))))))
+
+(deftest test-redo-stack-boundary
+  (testing "redo with empty redo stack does nothing"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a))]
+      (is (= buf (b/redo buf))))))
+
+(deftest test-new-operation-clears-redo-stack
+  (testing "new operation after undo clears redo stack"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/insert-char \b)
+                  (b/undo)
+                  (b/insert-char \c))]
+      (is (= "ac" (:text buf)))
+      (is (= 2 (:point buf))))))
