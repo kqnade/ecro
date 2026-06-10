@@ -39,7 +39,10 @@
       (assoc state :key-sequence new-seq)
       
       (nil? result)
-      (assoc state :key-sequence [])
+      (if (and (empty? (:key-sequence state)) (>= key-code 32) (< key-code 127))
+        ;; Regular character input → insert into buffer
+        (update state :current-buffer buffer/insert-char (char key-code))
+        (assoc state :key-sequence []))
       
       :else
       (let [buf (:current-buffer state)
@@ -80,6 +83,8 @@
         buf (:current-buffer state)
         lines (clojure.string/split (or (:text buf) "") #"\n" -1)
         visible-lines (take (- height 1) lines)]
+    ;; Hide cursor before rendering
+    (print "\033[?25l")
     ;; Move cursor to top-left instead of clearing screen
     (print "\033[H")
     ;; Render text
@@ -90,10 +95,10 @@
       (render-line "" idx width))
     ;; Render status line
     (render-status-line state height width)
-    ;; Position cursor
+    ;; Position cursor and show
     (let [point (:point buf 0)
           [line col] (buffer/point-to-line-column buf point)]
-      (print (str "\033[" (inc line) ";" (inc col) "H")))
+      (print (str "\033[" (inc line) ";" (inc col) "H\033[?25h")))
     (flush)))
 
 (defn log-event
@@ -107,9 +112,11 @@
   "Process a terminal event."
   [state event]
   (log-event event)
-  (case (:type event)
-    :key (handle-key state (:key_code event) (:modifiers event))
-    :resize state
+  (if event
+    (case (:type event)
+      :key (handle-key state (:key_code event) (:modifiers event))
+      :resize state
+      state)
     state))
 
 (defn -main
@@ -127,9 +134,11 @@
     (loop []
       (when (:running @editor-state)
         (render @editor-state)
-        (when-let [event (native/poll-event)]
-          (swap! editor-state process-event event))
-        (Thread/sleep 16) ; ~60fps
+        (let [event (native/poll-event)]
+          (when event
+            (swap! editor-state process-event event))
+          (when (nil? event)
+            (Thread/sleep 50))) ; sleep longer when no event
         (recur)))
     
     (finally
