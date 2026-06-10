@@ -139,6 +139,19 @@
     (= key-code 27)
     (assoc state :key-sequence [])
 
+    ;; Arrow keys
+    (= key-code 1001)
+    (update state :current-buffer core/previous-line)
+
+    (= key-code 1002)
+    (update state :current-buffer core/next-line)
+
+    (= key-code 1003)
+    (update state :current-buffer core/backward-char)
+
+    (= key-code 1004)
+    (update state :current-buffer core/forward-char)
+
     ;; Home
     (= key-code 1005)
     (update state :current-buffer core/move-beginning-of-line)
@@ -149,11 +162,15 @@
 
     ;; PageUp
     (= key-code 1007)
-    (update state :current-buffer scroll/scroll-up 10)
+    (update state :current-buffer (fn [buf]
+                                    (let [[_ h] (or (native/get-terminal-size) [80 24])]
+                                      (scroll/scroll-up buf (dec h)))))
 
     ;; PageDown
     (= key-code 1008)
-    (update state :current-buffer scroll/scroll-down 10)
+    (update state :current-buffer (fn [buf]
+                                    (let [[_ h] (or (native/get-terminal-size) [80 24])]
+                                      (scroll/scroll-down buf (dec h)))))
 
     ;; Insert
     (= key-code 1009)
