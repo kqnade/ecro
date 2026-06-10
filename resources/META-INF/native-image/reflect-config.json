@@ -1,0 +1,17 @@
+[
+  {
+    "name": "com.sun.jna.Library",
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.sun.jna.Native",
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.sun.jna.Pointer",
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  }
+]

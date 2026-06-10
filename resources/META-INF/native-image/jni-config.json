@@ -1,0 +1,15 @@
+[
+  {
+    "name": "ecro_core",
+    "methods": [
+      {
+        "name": "ecro_init",
+        "parameterTypes": []
+      },
+      {
+        "name": "ecro_shutdown",
+        "parameterTypes": []
+      }
+    ]
+  }
+]
