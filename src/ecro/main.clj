@@ -13,15 +13,23 @@
 (defonce lead-key (atom "ESC"))
 
 
+(def shift-modifier 4)
+
+
 (defn make-keymap
   "Create default keymap with lead-key."
   []
   (let [lk @lead-key]
     (-> (keymap/make-keymap)
+        (keymap/define-key ["C-a"] :move-beginning-of-line)
         (keymap/define-key ["C-e"] :move-end-of-line)
         (keymap/define-key ["C-k"] :kill-line)
+        (keymap/define-key ["C-z"] :undo)
+        (keymap/define-key ["C-S-z"] :redo)
+        (keymap/define-key ["C-/"] :undo)
         (keymap/define-key [lk "f"] :find-file)
         (keymap/define-key [lk "s"] :save-buffer)
+        (keymap/define-key [lk "u"] :undo)
         (keymap/define-key [lk lk] :keyboard-quit))))
 
 
@@ -78,6 +86,49 @@
     (subs (format (str "%-" width "s") expanded) 0 width)))
 
 
+(defn- shifted?
+  [modifiers]
+  (pos? (bit-and modifiers shift-modifier)))
+
+
+(defn key-name
+  "Return the keymap name for a terminal key code and modifier bitset."
+  [key-code modifiers]
+  (cond
+    (= key-code 31) "C-/"
+
+    (and (= key-code 26) (shifted? modifiers)) "C-S-z"
+
+    (< key-code 32) (str "C-" (char (+ key-code 96)))
+
+    :else (str (char key-code))))
+
+
+(defn- execute-command
+  "Execute an editor command against state."
+  [state command]
+  (let [buf (:current-buffer state)
+        kill-ring (or (:kill-ring state) (kr/make-kill-ring))
+        [new-buf new-kr] (case command
+                           :forward-char [(core/forward-char buf) kill-ring]
+                           :backward-char [(core/backward-char buf) kill-ring]
+                           :next-line [(core/next-line buf) kill-ring]
+                           :previous-line [(core/previous-line buf) kill-ring]
+                           :move-beginning-of-line [(core/move-beginning-of-line buf) kill-ring]
+                           :move-end-of-line [(core/move-end-of-line buf) kill-ring]
+                           :kill-line (let [[new-buf killed] (kr/kill-line buf)]
+                                        [new-buf (kr/kill-text kill-ring killed)])
+                           :undo [(buffer/undo buf) kill-ring]
+                           :redo [(buffer/redo buf) kill-ring]
+                           :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
+                           :save-buffer [(file/save-buffer buf) kill-ring]
+                           [buf kill-ring])]
+    (assoc state
+           :current-buffer new-buf
+           :kill-ring new-kr
+           :key-sequence [])))
+
+
 (defn render
   "Render editor state with diff updates."
   [state]
@@ -115,7 +166,7 @@
           lines (clojure.string/split text #"\n" -1)
           [line-num _] (buffer/point-to-line-column buf point)
           line-text (nth lines line-num "")
-          line-start (reduce + (map inc (take line-num lines)))
+          line-start (reduce + (map #(inc (count %)) (take line-num lines)))
           col-in-line (- point line-start)
           line-prefix (subs line-text 0 (max 0 (min col-in-line (count line-text))))
           visual-col (count (expand-tabs line-prefix tab-width))
@@ -159,18 +210,7 @@
           state)
 
         :else
-        (let [buf (:current-buffer state)
-              [new-buf new-kr] (case result
-                                 :move-end-of-line [(core/move-end-of-line buf) (:kill-ring state)]
-                                 :kill-line (let [[new-buf killed] (kr/kill-line buf)]
-                                              [new-buf (kr/kill-text (:kill-ring state) killed)])
-                                 :find-file [(file/find-file "/tmp/ecro_test.txt") (:kill-ring state)]
-                                 :save-buffer [(file/save-buffer buf) (:kill-ring state)]
-                                 [buf (:kill-ring state)])]
-          (assoc state
-                 :current-buffer new-buf
-                 :kill-ring new-kr
-                 :key-sequence []))))
+        (execute-command state result)))
 
     ;; Arrow keys
     (= key-code 1001)
@@ -222,9 +262,7 @@
     (assoc state :running false)
 
     :else
-    (let [key-str (if (< key-code 32)
-                    (str "C-" (char (+ key-code 96)))
-                    (str (char key-code)))
+    (let [key-str (key-name key-code modifiers)
           new-seq (conj (:key-sequence state) key-str)
           result (keymap/lookup-key (:keymap state) new-seq)]
       (cond
@@ -240,23 +278,7 @@
           (assoc state :key-sequence []))
 
         :else
-        (let [buf (:current-buffer state)
-              [new-buf new-kr] (case result
-                                 :forward-char [(core/forward-char buf) (:kill-ring state)]
-                                 :backward-char [(core/backward-char buf) (:kill-ring state)]
-                                 :next-line [(core/next-line buf) (:kill-ring state)]
-                                 :previous-line [(core/previous-line buf) (:kill-ring state)]
-                                 :move-beginning-of-line [(core/move-beginning-of-line buf) (:kill-ring state)]
-                                 :move-end-of-line [(core/move-end-of-line buf) (:kill-ring state)]
-                                 :kill-line (let [[new-buf killed] (kr/kill-line buf)]
-                                              [new-buf (kr/kill-text (:kill-ring state) killed)])
-                                 :find-file [(file/find-file "/tmp/ecro_test.txt") (:kill-ring state)]
-                                 :save-buffer [(file/save-buffer buf) (:kill-ring state)]
-                                 [buf (:kill-ring state)])]
-          (assoc state
-                 :current-buffer new-buf
-                 :kill-ring new-kr
-                 :key-sequence []))))))
+        (execute-command state result)))))
 
 
 (defn process-event
@@ -285,6 +307,7 @@
                        :keymap default-keymap
                        :frame nil
                        :current-buffer (buffer/make-buffer "*scratch*")
+                       :kill-ring (kr/make-kill-ring)
                        :message nil})]
       ;; Initial render
       (render @state)
