@@ -142,6 +142,19 @@
       (= command :quit) (assoc :running false))))
 
 
+(defn status-line
+  "Build the status line string from editor state."
+  [state]
+  (let [buf (:current-buffer state)
+        name (or (:name buf) "*scratch*")
+        modified (if (not= (:text buf) (:saved-text buf)) "*" "")
+        key-seq (when (seq (:key-sequence state))
+                  (str (clojure.string/join " " (:key-sequence state)) " "))]
+    (str " " name modified
+         (when key-seq (str "  " key-seq))
+         "    " (:message state))))
+
+
 (defn render
   "Render editor state with diff updates."
   [state]
@@ -163,13 +176,7 @@
     (doseq [idx (range (count visible-lines) (- height 1))]
       (update-screen-line idx (get old-screen idx) "" width))
     ;; Status line (always update)
-    (let [name (or (:name buf) "*scratch*")
-          modified (if (not= (:text buf) (:saved-text buf)) "*" "")
-          key-seq (when (seq (:key-sequence state))
-                    (str "C-" (clojure.string/join " " (:key-sequence state)) "-"))
-          status (str " " name modified
-                      (when key-seq (str "  " key-seq))
-                      "    " (:message state))]
+    (let [status (status-line state)]
       (print (str "\033[" height ";1H\033[7m"
                   (format (str "%-" width "s") (or status ""))
                   "\033[0m")))
