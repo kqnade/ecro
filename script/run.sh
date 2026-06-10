@@ -10,4 +10,4 @@ export JAVA_HOME="${JAVA_HOME:-$(mise which java 2>/dev/null | xargs dirname 2>/
 
 cd "${PROJECT_DIR}"
 
-exec clojure -M -m ecro.main "$@"
+exec clojure -J--enable-native-access=ALL-UNNAMED -M -m ecro.main "$@"

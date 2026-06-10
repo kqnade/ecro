@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 static TERMINAL_STATE: Mutex<TerminalState> = Mutex::new(TerminalState::new());
 
@@ -107,10 +107,9 @@ pub struct EcroEvent {
     pub modifiers: i32,
 }
 
-const EVENT_NONE: i32 = 0;
+#[allow(dead_code)]
 const EVENT_KEY: i32 = 1;
 const EVENT_RESIZE: i32 = 2;
-const EVENT_MOUSE: i32 = 3;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ecro_poll_event() -> *mut EcroEvent {
