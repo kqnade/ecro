@@ -31,6 +31,16 @@ LeadKey + キー でコマンド実行：
 
 ユーザーの分割キーボード（Cokahleth類似配列）。ホームポジションは `A R S T N E I O`。
 
+### レイヤー0（ベース）
+
+```
+左中:  LT3(TAB)  KC_A      KC_R      KC_S      KC_T      KC_G      KC_LANG2
+左親:  -         -         -         KC_ESCAPE LT2(TAB)  LSFT_T(SPACE) -
+```
+
+- **LT3(TAB)**: 左手小指左横（旧 KC_TAB）。長押しで Layer 3 へ
+- **LT2(TAB)**: 親指。長押しで Layer 2（編集/ナビゲーション）へ
+
 ### レイヤー2（編集/ナビゲーション）- LT2(TAB) 長押しで発動
 
 ```
@@ -43,6 +53,23 @@ LeadKey + キー でコマンド実行：
 右中:  LANG1     ←         ↓         ↑         →        PGUP      PAUSE
 右下:  -         MEDIA_PREV MEDIA_STOP MEDIA_PLAY MEDIA_NEXT PGDN    RCTRL
 右親:  -         ENTER     LALT(SPACE) LGUI    -         -         -
+```
+
+### レイヤー3（ecro拡張）- LT3(TAB) 長押しで発動
+
+**リセット済み。自由にキー配置可能。**
+
+旧 KC_TAB の位置（左手小指左横）を LT3(TAB) に変更したため、Layer 3 が利用可能に。
+
+Meta 系キー（M-Arrow, M-f, M-b 等）を配置する予定。従来の Alt 同時押しより打ちやすい。
+
+配置案（未確定）:
+```
+左上:  C-l       M-f       M-b       M-d       M-@       M-w       -
+左中:  -         M-<       M->       M-{       M-}       -         -
+左下:  -         M-y       M-v       M-%       -         -         -
+...
+右中:  -         M-←       M-↓       M-↑       M-→       -         -
 ```
 
 ---
