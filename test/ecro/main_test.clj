@@ -190,3 +190,24 @@
           new-state (main/handle-key state 113 0)]
       (is (not (:running new-state)))
       (is (= [] (:key-sequence new-state))))))
+
+
+(deftest test-shift-right-sets-mark-and-extends-region
+  (testing "Shift+Right sets mark and extends region"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \e)
+                                     (b/insert-char \l)
+                                     (b/insert-char \l)
+                                     (b/insert-char \o)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          ;; Shift+Right (code 1004, modifiers with Shift=4)
+          new-state (main/handle-key state 1004 5)]
+      (is (= 2 (:mark (:current-buffer new-state))))
+      (is (= 3 (:point (:current-buffer new-state))))
+      (is (= "l" (b/region-text (:current-buffer new-state)))))))

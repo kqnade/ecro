@@ -227,16 +227,40 @@
 
     ;; Arrow keys
     (= key-code 1001)
-    (update state :current-buffer core/previous-line)
+    (update state :current-buffer (fn [buf]
+                                    (let [b (if (shifted? modifiers)
+                                              (if (nil? (:mark buf))
+                                                (buffer/set-mark buf)
+                                                buf)
+                                              buf)]
+                                      (core/previous-line b))))
 
     (= key-code 1002)
-    (update state :current-buffer core/next-line)
+    (update state :current-buffer (fn [buf]
+                                    (let [b (if (shifted? modifiers)
+                                              (if (nil? (:mark buf))
+                                                (buffer/set-mark buf)
+                                                buf)
+                                              buf)]
+                                      (core/next-line b))))
 
     (= key-code 1003)
-    (update state :current-buffer core/backward-char)
+    (update state :current-buffer (fn [buf]
+                                    (let [b (if (shifted? modifiers)
+                                              (if (nil? (:mark buf))
+                                                (buffer/set-mark buf)
+                                                buf)
+                                              buf)]
+                                      (core/backward-char b))))
 
     (= key-code 1004)
-    (update state :current-buffer core/forward-char)
+    (update state :current-buffer (fn [buf]
+                                    (let [b (if (shifted? modifiers)
+                                              (if (nil? (:mark buf))
+                                                (buffer/set-mark buf)
+                                                buf)
+                                              buf)]
+                                      (core/forward-char b))))
 
     ;; Home
     (= key-code 1005)
