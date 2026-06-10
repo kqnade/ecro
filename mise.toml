@@ -1,0 +1,5 @@
+[tools]
+cljstyle = "latest"
+clojure = "latest"
+rust = "latest"
+rust-analyzer = "latest"
