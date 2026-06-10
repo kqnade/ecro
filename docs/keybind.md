@@ -55,34 +55,37 @@ LeadKey + キー でコマンド実行：
 右親:  -         ENTER     LALT(SPACE) LGUI    -         -         -
 ```
 
-### レイヤー3（ecro拡張）- LT3(TAB) 長押しで発動
+### レイヤー3（Meta修飾）- LT3(TAB) 長押しで発動
 
 **Layer 0 + Meta 修飾キー。**
 
 旧 KC_TAB の位置（左手小指左横）を LT3(TAB) に変更したため、Layer 3 が利用可能に。
 
 **設計方針**:
-- **M-Arrow**: Layer 2 と同じ位置（←↓↑→ に M-← M-↓ M-↑ M-→ を配置）
-- **その他**: Layer 0 のキー位置に Meta 修飾を付与する方針
+- Layer 0 の主要文字キー位置に Meta 修飾を付与
+- 小指外側、親指、言語切替、Control などは `KC_NO` または透過
 - Alt 同時押し不要。LT3(TAB) ホールド + 通常キー位置で Meta コマンド実行
 
-具体的なLayer 3配列は未確定。`def.json` 側の実配置が固まったら反映する。
+```
+左上:  NO        M-q       M-w       M-f       M-p       M-b       NO
+左中:  TRNS      M-a       M-r       M-s       M-t       M-g       NO
+左下:  NO        M-z       M-x       M-c       M-d       M-v       -
+左親:  -         -         -         NO        NO        NO        -
 
-**M-Arrow 配置（Layer 2 と同じ位置）**:
-- `M-←` → `backward-word`
-- `M-→` → `forward-word`
-- `M-↑` → `backward-paragraph` / `beginning-of-buffer`
-- `M-↓` → `forward-paragraph` / `end-of-buffer`
+右上:  NO        M-j       M-l       M-u       M-y       M-'       NO
+右中:  NO        M-n       M-m       M-e       M-i       M-o       M-;
+右下:  -         M-k       M-h       M-,       M-.       M-/       NO
+右親:  -         NO        NO        NO        -         -         -
+```
 
 **主要 M-キー候補（コマンド側の割り当て候補）**:
-- `M-f` / `M-→` → `forward-word`
-- `M-b` / `M-←` → `backward-word`
+- `M-f` → `forward-word`
+- `M-b` → `backward-word`
 - `M-d` → `kill-word`
 - `M-w` → `kill-ring-save` (copy)
 - `M-y` → `yank-pop`
 - `M-v` → `scroll-down-command`
-- `M-%` → `query-replace`
-- `M-<` / `M->` → buffer先頭/末尾
+- `M-,` / `M-.` → buffer先頭/末尾などの移動候補
 
 ---
 
@@ -101,8 +104,8 @@ LeadKey + キー でコマンド実行：
 | `C-e` | `move-end-of-line` | ✅ |
 | `M-f` | `forward-word` | ❌ |
 | `M-b` | `backward-word` | ❌ |
-| `M-<` | `beginning-of-buffer` | ❌ |
-| `M->` | `end-of-buffer` | ❌ |
+| `M-,` | `beginning-of-buffer` 候補 | ❌ |
+| `M-.` | `end-of-buffer` 候補 | ❌ |
 
 ### スクロール系
 
@@ -237,7 +240,7 @@ PGDN  → 画面ダウンスクロール
 
 3. **Phase C（拡張）** — 使い勝手
    - word移動: `M-f` `M-b`
-   - buffer端移動: `M-<` `M->`
+   - buffer端移動: `M-,` `M-.`
    - file tree jumper: ポップアップ `ESC d`
    - `C-l` recenter
 
