@@ -190,3 +190,37 @@
                   (b/insert-char \c))]
       (is (= "ac" (:text buf)))
       (is (= 2 (:point buf))))))
+
+
+;; Mark/Region tests
+(deftest test-set-mark
+  (testing "set-mark stores current point"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/insert-char \b)
+                  (b/set-mark))]
+      (is (= 2 (:mark buf))))))
+
+
+(deftest test-deactivate-mark
+  (testing "deactivate-mark clears mark"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \a)
+                  (b/set-mark)
+                  (b/deactivate-mark))]
+      (is (nil? (:mark buf))))))
+
+
+(deftest test-mark-region-text
+  (testing "region-text returns text between mark and point"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-char \h)
+                  (b/insert-char \e)
+                  (b/insert-char \l)
+                  (b/insert-char \l)
+                  (b/insert-char \o)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/set-mark)
+                  (b/move-point-forward))]
+      (is (= "ll" (b/region-text buf))))))

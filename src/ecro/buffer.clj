@@ -9,6 +9,7 @@
    {:name name
     :text ""
     :point 0
+    :mark nil
     :scroll-line 0
     :undo-stack []
     :redo-stack []
@@ -163,5 +164,27 @@
                       (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
                              :point op-point)
                       (update :redo-stack pop)
-                      (update :undo-stack conj op)))))
+                       (update :undo-stack conj op)))))
     buf))
+
+
+(defn set-mark
+  "Set mark to current point."
+  [buf]
+  (assoc buf :mark (:point buf)))
+
+
+(defn deactivate-mark
+  "Clear the mark."
+  [buf]
+  (assoc buf :mark nil))
+
+
+(defn region-text
+  "Return text between mark and point, or nil if no mark."
+  [buf]
+  (when-let [mark (:mark buf)]
+    (let [start (min mark (:point buf))
+          end (max mark (:point buf))
+          text (:text buf)]
+      (subs text start end))))
