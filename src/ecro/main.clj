@@ -94,9 +94,13 @@
     ;; Status line (always update)
     (let [name (or (:name buf) "*scratch*")
           modified (if (not= (:text buf) (:saved-text buf)) "*" "")
-          status (str " " name modified "    " (:message state))]
+          key-seq (when (seq (:key-sequence state))
+                    (str "C-" (clojure.string/join " " (:key-sequence state)) "-"))
+          status (str " " name modified
+                      (when key-seq (str "  " key-seq))
+                      "    " (:message state))]
       (print (str "\033[" height ";1H\033[7m"
-                  (format (str "%-" width "s") status)
+                  (format (str "%-" width "s") (or status ""))
                   "\033[0m")))
     ;; Position cursor (accounting for tab expansion)
     (let [point (:point buf 0)
