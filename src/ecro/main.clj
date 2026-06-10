@@ -4,22 +4,28 @@
     [ecro.core :as core]
     [ecro.file :as file]
     [ecro.keymap :as keymap]
+    [ecro.kill-ring :as kr]
     [ecro.native :as native]
     [ecro.scroll :as scroll]
     [ecro.window :as window]))
 
 
-(def default-keymap
-  (-> (keymap/make-keymap)
-      (keymap/define-key ["C-f"] :forward-char)
-      (keymap/define-key ["C-b"] :backward-char)
-      (keymap/define-key ["C-n"] :next-line)
-      (keymap/define-key ["C-p"] :previous-line)
-      (keymap/define-key ["C-a"] :move-beginning-of-line)
-      (keymap/define-key ["C-e"] :move-end-of-line)
-      (keymap/define-key ["C-k"] :kill-line)
-      (keymap/define-key ["C-x" "C-f"] :find-file)
-      (keymap/define-key ["C-x" "C-s"] :save-buffer)))
+(defonce lead-key (atom "ESC"))
+
+
+(defn make-keymap
+  "Create default keymap with lead-key."
+  []
+  (let [lk @lead-key]
+    (-> (keymap/make-keymap)
+        (keymap/define-key ["C-e"] :move-end-of-line)
+        (keymap/define-key ["C-k"] :kill-line)
+        (keymap/define-key [lk "f"] :find-file)
+        (keymap/define-key [lk "s"] :save-buffer)
+        (keymap/define-key [lk lk] :keyboard-quit))))
+
+
+(def default-keymap (make-keymap))
 
 
 (defonce editor-state
@@ -28,7 +34,8 @@
          :keymap default-keymap
          :frame nil
          :current-buffer nil
-         :message nil}))
+         :message nil
+         :kill-ring (kr/make-kill-ring)}))
 
 
 ;; Screen buffer for diff rendering
@@ -135,9 +142,35 @@
     (= key-code 9)
     (update state :current-buffer buffer/insert-tab)
 
-    ;; Escape - cancel prefix
+    ;; Escape - prefix key
     (= key-code 27)
-    (assoc state :key-sequence [])
+    (let [new-seq (conj (:key-sequence state) "ESC")
+          result (keymap/lookup-key (:keymap state) new-seq)]
+      (cond
+        (= result :prefix)
+        (assoc state :key-sequence new-seq)
+
+        (= result :keyboard-quit)
+        (assoc state :key-sequence [])
+
+        (nil? result)
+        (if (seq (:key-sequence state))
+          (assoc state :key-sequence [])
+          state)
+
+        :else
+        (let [buf (:current-buffer state)
+              [new-buf new-kr] (case result
+                                 :move-end-of-line [(core/move-end-of-line buf) (:kill-ring state)]
+                                 :kill-line (let [[new-buf killed] (kr/kill-line buf)]
+                                              [new-buf (kr/kill-text (:kill-ring state) killed)])
+                                 :find-file [(file/find-file "/tmp/ecro_test.txt") (:kill-ring state)]
+                                 :save-buffer [(file/save-buffer buf) (:kill-ring state)]
+                                 [buf (:kill-ring state)])]
+          (assoc state
+                 :current-buffer new-buf
+                 :kill-ring new-kr
+                 :key-sequence []))))
 
     ;; Arrow keys
     (= key-code 1001)
@@ -208,19 +241,21 @@
 
         :else
         (let [buf (:current-buffer state)
-              new-buf (case result
-                        :forward-char (core/forward-char buf)
-                        :backward-char (core/backward-char buf)
-                        :next-line (core/next-line buf)
-                        :previous-line (core/previous-line buf)
-                        :move-beginning-of-line (core/move-beginning-of-line buf)
-                        :move-end-of-line (core/move-end-of-line buf)
-                        :kill-line (core/kill-line buf)
-                        :find-file (file/find-file "/tmp/ecro_test.txt")
-                        :save-buffer (file/save-buffer buf)
-                        buf)]
+              [new-buf new-kr] (case result
+                                 :forward-char [(core/forward-char buf) (:kill-ring state)]
+                                 :backward-char [(core/backward-char buf) (:kill-ring state)]
+                                 :next-line [(core/next-line buf) (:kill-ring state)]
+                                 :previous-line [(core/previous-line buf) (:kill-ring state)]
+                                 :move-beginning-of-line [(core/move-beginning-of-line buf) (:kill-ring state)]
+                                 :move-end-of-line [(core/move-end-of-line buf) (:kill-ring state)]
+                                 :kill-line (let [[new-buf killed] (kr/kill-line buf)]
+                                              [new-buf (kr/kill-text (:kill-ring state) killed)])
+                                 :find-file [(file/find-file "/tmp/ecro_test.txt") (:kill-ring state)]
+                                 :save-buffer [(file/save-buffer buf) (:kill-ring state)]
+                                 [buf (:kill-ring state)])]
           (assoc state
                  :current-buffer new-buf
+                 :kill-ring new-kr
                  :key-sequence []))))))
 
 
