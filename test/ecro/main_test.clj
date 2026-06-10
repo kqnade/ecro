@@ -124,7 +124,7 @@
 
 
 (deftest test-kill-region-cut-integration
-  (testing "C-x kills selected region"
+  (testing "C-x kills selected region and deactivates mark"
     (let [state {:current-buffer (-> (b/make-buffer "test")
                                      (b/insert-char \h)
                                      (b/insert-char \e)
@@ -142,7 +142,29 @@
                  :kill-ring (kr/make-kill-ring)}
           new-state (main/handle-key state 24 1)]
       (is (= "heo" (:text (:current-buffer new-state))))
-      (is (= "ll" (kr/yank (:kill-ring new-state)))))))
+      (is (= "ll" (kr/yank (:kill-ring new-state))))
+      (is (nil? (:mark (:current-buffer new-state)))))))
+
+
+(deftest test-kill-region-reverse-selection-deactivates-mark
+  (testing "C-x with reverse selection deactivates mark"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \e)
+                                     (b/insert-char \l)
+                                     (b/insert-char \l)
+                                     (b/insert-char \o)
+                                     (b/set-mark)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          new-state (main/handle-key state 24 1)]
+      (is (= "he" (:text (:current-buffer new-state))))
+      (is (= "llo" (kr/yank (:kill-ring new-state))))
+      (is (nil? (:mark (:current-buffer new-state)))))))
 
 
 (deftest test-kill-ring-save-copy-integration

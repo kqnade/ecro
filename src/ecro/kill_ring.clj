@@ -69,7 +69,7 @@
         text (:text buf)
         killed (subs text start end)
         new-text (str (subs text 0 start) (subs text end))]
-    [(assoc buf :text new-text :point start) killed]))
+    [(assoc buf :text new-text :point start :mark nil) killed]))
 
 
 (defn kill-ring-save
