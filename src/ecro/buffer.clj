@@ -3,12 +3,16 @@
 
 (defn make-buffer
   "Create a new buffer with the given name."
-  [name]
-  {:name name
-   :text ""
-   :point 0
-   :undo-stack []
-   :redo-stack []})
+  ([name]
+   (make-buffer name {}))
+  ([name opts]
+   {:name name
+    :text ""
+    :point 0
+    :undo-stack []
+    :redo-stack []
+    :tab-width (get opts :tab-width 2)
+    :indent-tabs-mode (get opts :indent-tabs-mode false)}))
 
 
 (defn- record-operation
@@ -62,10 +66,37 @@
       buf)))
 
 
+(defn point-to-line-column
+  "Convert a point (0-indexed character position) to [line column]."
+  [buf point]
+  (let [text (:text buf)
+        lines (clojure.string/split (subs text 0 point) #"\n" -1)]
+    [(dec (count lines))
+     (count (last lines))]))
+
+
 (defn insert-newline
   "Insert a newline at the current point."
   [buf]
   (insert-char buf \newline))
+
+
+(defn insert-tab
+  "Insert a tab or spaces depending on indent-tabs-mode."
+  [buf]
+  (let [tab-width (:tab-width buf 8)
+        use-tabs (:indent-tabs-mode buf true)]
+    (if use-tabs
+      (insert-char buf \tab)
+      (let [point (:point buf)
+            text (:text buf)
+            lines (clojure.string/split text #"\n" -1)
+            [line _] (point-to-line-column buf point)
+            line-text (nth lines line "")
+            line-start (reduce + (map inc (take line lines)))
+            col (- point line-start)
+            spaces (- tab-width (mod col tab-width))]
+        (reduce (fn [b _] (insert-char b \space)) buf (range spaces))))))
 
 
 (defn move-point-forward
@@ -85,15 +116,6 @@
     (if (> point 0)
       (assoc buf :point (dec point))
       buf)))
-
-
-(defn point-to-line-column
-  "Convert a point (0-indexed character position) to [line column]."
-  [buf point]
-  (let [text (:text buf)
-        lines (clojure.string/split (subs text 0 point) #"\n" -1)]
-    [(dec (count lines))
-     (count (last lines))]))
 
 
 (defn undo

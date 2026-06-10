@@ -116,7 +116,7 @@
 
     ;; Tab
     (= key-code 9)
-    (update state :current-buffer buffer/insert-char \tab)
+    (update state :current-buffer buffer/insert-tab)
 
     ;; Escape - cancel prefix
     (= key-code 27)
