@@ -41,6 +41,15 @@ script/build-native.sh
 - Do not start the next implementation unit until the current one has passing tests and has been committed.
 - If a change naturally splits into core model, command integration, and docs, commit each coherent unit separately after its relevant tests/checks pass.
 
+## TODO Granularity
+
+- TODOs must mirror commit granularity: one TODO should describe one implementation unit that can become one commit.
+- Do not make TODOs that bundle independent behaviors. For example, `C-x/C-c/C-v cut-copy-paste`, `ESC-q quit`, and `Shift+Arrow selection` are separate TODOs.
+- Keep the active TODO focused on the next commit only: write the focused test, implement the minimum, run relevant checks, then commit.
+- If a TODO cannot be committed after one focused test/implementation cycle, split it before coding.
+- When existing work is already mixed, add a TODO to separate the mixed diff before continuing.
+- Documentation updates should be separate TODOs unless they are the only change needed for that implementation unit.
+
 Test frameworks:
 - Rust: `cargo test`
 - Clojure: `clojure.test`
