@@ -227,36 +227,32 @@
 
     ;; Arrow keys
     (= key-code 1001)
-    (update state :current-buffer (fn [buf]
-                                    (if (shifted? modifiers)
-                                      (core/previous-line (if (nil? (:mark buf))
-                                                            (buffer/set-mark buf)
-                                                            buf))
-                                      (core/previous-line (buffer/deactivate-mark buf)))))
+    (let [buf (:current-buffer state)
+          b (if (shifted? modifiers)
+              (or (:mark buf) (buffer/set-mark buf))
+              (buffer/deactivate-mark buf))]
+      (assoc state :current-buffer (core/previous-line b)))
 
     (= key-code 1002)
-    (update state :current-buffer (fn [buf]
-                                    (if (shifted? modifiers)
-                                      (core/next-line (if (nil? (:mark buf))
-                                                        (buffer/set-mark buf)
-                                                        buf))
-                                      (core/next-line (buffer/deactivate-mark buf)))))
+    (let [buf (:current-buffer state)
+          b (if (shifted? modifiers)
+              (or (:mark buf) (buffer/set-mark buf))
+              (buffer/deactivate-mark buf))]
+      (assoc state :current-buffer (core/next-line b)))
 
     (= key-code 1003)
-    (update state :current-buffer (fn [buf]
-                                    (if (shifted? modifiers)
-                                      (core/backward-char (if (nil? (:mark buf))
-                                                            (buffer/set-mark buf)
-                                                            buf))
-                                      (core/backward-char (buffer/deactivate-mark buf)))))
+    (let [buf (:current-buffer state)
+          b (if (shifted? modifiers)
+              (or (:mark buf) (buffer/set-mark buf))
+              (buffer/deactivate-mark buf))]
+      (assoc state :current-buffer (core/backward-char b)))
 
     (= key-code 1004)
-    (update state :current-buffer (fn [buf]
-                                    (if (shifted? modifiers)
-                                      (core/forward-char (if (nil? (:mark buf))
-                                                           (buffer/set-mark buf)
-                                                           buf))
-                                      (core/forward-char (buffer/deactivate-mark buf)))))
+    (let [buf (:current-buffer state)
+          b (if (shifted? modifiers)
+              (or (:mark buf) (buffer/set-mark buf))
+              (buffer/deactivate-mark buf))]
+      (assoc state :current-buffer (core/forward-char b)))
 
     ;; Home
     (= key-code 1005)
