@@ -164,7 +164,7 @@
                       (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
                              :point op-point)
                       (update :redo-stack pop)
-                       (update :undo-stack conj op)))))
+                      (update :undo-stack conj op)))))
     buf))
 
 

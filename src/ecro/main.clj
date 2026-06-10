@@ -27,6 +27,9 @@
         (keymap/define-key ["C-z"] :undo)
         (keymap/define-key ["C-S-z"] :redo)
         (keymap/define-key ["C-/"] :undo)
+        (keymap/define-key ["C-x"] :kill-region)
+        (keymap/define-key ["C-c"] :kill-ring-save)
+        (keymap/define-key ["C-v"] :yank)
         (keymap/define-key [lk "f"] :find-file)
         (keymap/define-key [lk "s"] :save-buffer)
         (keymap/define-key [lk "u"] :undo)
@@ -120,6 +123,14 @@
                                         [new-buf (kr/kill-text kill-ring killed)])
                            :undo [(buffer/undo buf) kill-ring]
                            :redo [(buffer/redo buf) kill-ring]
+                           :kill-region (if-let [mark (:mark buf)]
+                                          (let [[new-buf killed] (kr/kill-region buf mark (:point buf))]
+                                            [new-buf (kr/kill-text kill-ring killed)])
+                                          [buf kill-ring])
+                           :kill-ring-save (if-let [region (buffer/region-text buf)]
+                                             [buf (kr/kill-text kill-ring region)]
+                                             [buf kill-ring])
+                           :yank [(kr/yank-text buf kill-ring) kill-ring]
                            :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
                            :save-buffer [(file/save-buffer buf) kill-ring]
                            [buf kill-ring])]
@@ -256,10 +267,6 @@
     ;; Function keys F1-F24
     (>= key-code 2000)
     state
-
-    ;; Ctrl-C (3) - quit
-    (= key-code 3)
-    (assoc state :running false)
 
     :else
     (let [key-str (key-name key-code modifiers)

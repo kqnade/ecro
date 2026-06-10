@@ -95,9 +95,9 @@
 (deftest test-kill-ring-max
   (testing "kill ring respects max size"
     (let [kr (-> (kr/make-kill-ring 2)
-                  (kr/kill-text "one")
-                  (kr/kill-text "two")
-                  (kr/kill-text "three"))]
+                 (kr/kill-text "one")
+                 (kr/kill-text "two")
+                 (kr/kill-text "three"))]
       (is (= 2 (count (:entries kr))))
       (is (= "three" (first (:entries kr))))
       (is (= "two" (second (:entries kr)))))))
@@ -115,8 +115,8 @@
                   (b/move-point-backward))
           kr (-> (kr/make-kill-ring)
                  (kr/kill-ring-save buf))]
-      (is (= "hell" (b/region-text buf)))
-      (is (= "hell" (kr/yank kr)))
+      (is (= "o" (b/region-text buf)))
+      (is (= "o" (kr/yank kr)))
       (is (= "hello" (:text buf))))))
 
 

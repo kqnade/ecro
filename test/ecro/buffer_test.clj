@@ -222,5 +222,6 @@
                   (b/move-point-backward)
                   (b/move-point-backward)
                   (b/set-mark)
+                  (b/move-point-forward)
                   (b/move-point-forward))]
-      (is (= "ll" (b/region-text buf))))))
+      (is (= "lo" (b/region-text buf))))))

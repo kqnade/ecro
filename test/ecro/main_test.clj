@@ -121,3 +121,60 @@
                  :kill-ring (kr/make-kill-ring)}
           new-state (main/handle-key state 31 1)]
       (is (= "" (:text (:current-buffer new-state)))))))
+
+
+(deftest test-kill-region-cut-integration
+  (testing "C-x kills selected region"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \e)
+                                     (b/insert-char \l)
+                                     (b/insert-char \l)
+                                     (b/insert-char \o)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/set-mark)
+                                     (b/move-point-forward)
+                                     (b/move-point-forward))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          new-state (main/handle-key state 24 1)]
+      (is (= "heo" (:text (:current-buffer new-state))))
+      (is (= "ll" (kr/yank (:kill-ring new-state)))))))
+
+
+(deftest test-kill-ring-save-copy-integration
+  (testing "C-c copies selected region without deleting"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \e)
+                                     (b/insert-char \l)
+                                     (b/insert-char \l)
+                                     (b/insert-char \o)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/move-point-backward)
+                                     (b/set-mark)
+                                     (b/move-point-forward)
+                                     (b/move-point-forward))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          new-state (main/handle-key state 3 1)]
+      (is (= "hello" (:text (:current-buffer new-state))))
+      (is (= "ll" (kr/yank (:kill-ring new-state)))))))
+
+
+(deftest test-yank-paste-integration
+  (testing "C-v pastes from kill ring"
+    (let [state {:current-buffer (-> (b/make-buffer "test")
+                                     (b/insert-char \h)
+                                     (b/insert-char \i))
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (-> (kr/make-kill-ring)
+                                (kr/kill-text " there"))}
+          new-state (main/handle-key state 22 1)]
+      (is (= "hi there" (:text (:current-buffer new-state)))))))
