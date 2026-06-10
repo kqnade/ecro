@@ -121,25 +121,30 @@ pub extern "C" fn ecro_poll_event() -> *mut EcroEvent {
         Ok(true) => {
             match read() {
                 Ok(Event::Key(key_event)) => {
-                    let code = match key_event.code {
-                        KeyCode::Char(c) => c as i32,
-                        KeyCode::Up => 1001,
-                        KeyCode::Down => 1002,
-                        KeyCode::Left => 1003,
-                        KeyCode::Right => 1004,
-                        KeyCode::Enter => 13,
-                        KeyCode::Esc => 27,
-                        KeyCode::Backspace => 127,
-                        KeyCode::Tab => 9,
-                        _ => 0,
-                    };
-                    
-                    let modifiers = if key_event.modifiers.contains(KeyModifiers::CONTROL) {
-                        1
-                    } else if key_event.modifiers.contains(KeyModifiers::ALT) {
-                        2
-                    } else {
-                        0
+                    let (code, modifiers) = match key_event.code {
+                        KeyCode::Char(c) => {
+                            let key_code = if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+                                // Ctrl+key returns control code (1-26)
+                                (c as u8 & 0x1f) as i32
+                            } else {
+                                c as i32
+                            };
+                            let mods = if key_event.modifiers.contains(KeyModifiers::ALT) {
+                                2
+                            } else {
+                                0
+                            };
+                            (key_code, mods)
+                        }
+                        KeyCode::Up => (1001, 0),
+                        KeyCode::Down => (1002, 0),
+                        KeyCode::Left => (1003, 0),
+                        KeyCode::Right => (1004, 0),
+                        KeyCode::Enter => (13, 0),
+                        KeyCode::Esc => (27, 0),
+                        KeyCode::Backspace => (127, 0),
+                        KeyCode::Tab => (9, 0),
+                        _ => (0, 0),
                     };
                     
                     let event = EcroEvent {

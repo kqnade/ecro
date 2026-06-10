@@ -62,7 +62,7 @@
   "Render a single line of text."
   [line y width]
   (let [padded (format (str "%-" width "s") line)]
-    (println (str "\033[" (inc y) ";1H" (subs padded 0 (min width (count padded)))))))
+    (print (str "\033[" (inc y) ";1H" (subs padded 0 (min width (count padded)))))))
 
 (defn render-status-line
   "Render the status line at the bottom."
@@ -71,7 +71,7 @@
         name (or (:name buf) "*scratch*")
         modified (if (not= (:text buf) (:saved-text buf)) "*" "")
         status (str " " name modified "    " (:message state))]
-    (println (str "\033[" height ";1H\033[7m" (format (str "%-" width "s") status) "\033[0m"))))
+    (print (str "\033[" height ";1H\033[7m" (format (str "%-" width "s") status) "\033[0m"))))
 
 (defn render
   "Render the editor state to the terminal."
@@ -80,8 +80,8 @@
         buf (:current-buffer state)
         lines (clojure.string/split (or (:text buf) "") #"\n" -1)
         visible-lines (take (- height 1) lines)]
-    ;; Clear screen
-    (print "\033[2J")
+    ;; Move cursor to top-left instead of clearing screen
+    (print "\033[H")
     ;; Render text
     (doseq [[idx line] (map-indexed vector visible-lines)]
       (render-line line idx width))
@@ -93,12 +93,20 @@
     ;; Position cursor
     (let [point (:point buf 0)
           [line col] (buffer/point-to-line-column buf point)]
-      (println (str "\033[" (inc line) ";" (inc col) "H")))
+      (print (str "\033[" (inc line) ";" (inc col) "H")))
     (flush)))
+
+(defn log-event
+  "Log event to file for debugging."
+  [event]
+  (spit "/tmp/ecro_debug.log"
+        (str (java.time.LocalDateTime/now) " " event "\n")
+        :append true))
 
 (defn process-event
   "Process a terminal event."
   [state event]
+  (log-event event)
   (case (:type event)
     :key (handle-key state (:key_code event) (:modifiers event))
     :resize state
