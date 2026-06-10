@@ -34,11 +34,31 @@
 (defonce screen-buffer (atom []))
 
 
+(defn expand-tabs
+  "Expand tab characters to spaces."
+  [line tab-width]
+  (loop [chars (seq line)
+         col 0
+         result ""]
+    (if (seq chars)
+      (let [ch (first chars)]
+        (if (= ch \tab)
+          (let [spaces (- tab-width (mod col tab-width))]
+            (recur (rest chars)
+                   (+ col spaces)
+                   (str result (apply str (repeat spaces " ")))))
+          (recur (rest chars)
+                 (inc col)
+                 (str result ch))))
+      result)))
+
+
 (defn update-screen-line
   "Update a single line on screen, only outputting changes."
   [y old-line new-line width]
   (let [old (or old-line "")
-        new (subs (format (str "%-" width "s") new-line) 0 width)]
+        expanded (expand-tabs new-line 8)
+        new (subs (format (str "%-" width "s") expanded) 0 width)]
     (when (not= old new)
       (print (str "\033[" (inc y) ";1H" new)))))
 
@@ -66,10 +86,17 @@
       (print (str "\033[" height ";1H\033[7m"
                   (format (str "%-" width "s") status)
                   "\033[0m")))
-    ;; Position cursor
+    ;; Position cursor (accounting for tab expansion)
     (let [point (:point buf 0)
-          [line col] (buffer/point-to-line-column buf point)]
-      (print (str "\033[" (inc line) ";" (inc col) "H\033[?25h")))
+          text (:text buf "")
+          lines (clojure.string/split text #"\n" -1)
+          [line-num _] (buffer/point-to-line-column buf point)
+          line-text (nth lines line-num "")
+          line-start (reduce + (map inc (take line-num lines)))
+          col-in-line (- point line-start)
+          line-prefix (subs line-text 0 (max 0 (min col-in-line (count line-text))))
+          visual-col (count (expand-tabs line-prefix 8))]
+      (print (str "\033[" (inc line-num) ";" (inc visual-col) "H\033[?25h")))
     (flush)
     ;; Update screen buffer
     (reset! screen-buffer (mapv #(format (str "%-" width "s") %) visible-lines))))
