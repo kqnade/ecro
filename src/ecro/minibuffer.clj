@@ -18,6 +18,14 @@
   (assoc mb :prompt prompt))
 
 
+(defn prompt-for
+  "Create a minibuffer for a specific command prompt."
+  [prompt command]
+  (-> (make-minibuffer)
+      (set-prompt prompt)
+      (assoc :command command)))
+
+
 (defn insert-char
   "Insert a character into the minibuffer."
   [mb ch]

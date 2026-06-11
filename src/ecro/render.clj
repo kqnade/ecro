@@ -54,15 +54,17 @@
 (defn status-line
   "Build the status line string from editor state."
   [state]
-  (let [buf (:current-buffer state)
-        name (or (:name buf) "*scratch*")
-        modified (if (not= (:text buf) (:saved-text buf)) "*" "")
-        key-seq (when (seq (:key-sequence state))
-                  (str (str/join " " (:key-sequence state)) " "))]
-    (str " " name modified
-         (when key-seq (str "  " key-seq))
-         "    " (or (notification/text (:notification state))
-                    (:message state)))))
+  (if-let [mb (:minibuffer state)]
+    (str (:prompt mb) (:text (:buffer mb)))
+    (let [buf (:current-buffer state)
+          name (or (:name buf) "*scratch*")
+          modified (if (not= (:text buf) (:saved-text buf)) "*" "")
+          key-seq (when (seq (:key-sequence state))
+                    (str (str/join " " (:key-sequence state)) " "))]
+      (str " " name modified
+           (when key-seq (str "  " key-seq))
+           "    " (or (notification/text (:notification state))
+                      (:message state))))))
 
 
 (defn render

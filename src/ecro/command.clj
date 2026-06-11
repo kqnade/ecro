@@ -4,6 +4,7 @@
     [ecro.core :as core]
     [ecro.file :as file]
     [ecro.kill-ring :as kr]
+    [ecro.minibuffer :as minibuffer]
     [ecro.notification :as notification]
     [ecro.state :as state]
     [ecro.undo :as undo]))
@@ -30,8 +31,16 @@
   [editor-state command]
   (let [buf (:current-buffer editor-state)
         kill-ring (or (:kill-ring editor-state) (kr/make-kill-ring))]
-    (if (= command :save-buffer)
+    (cond
+      (= command :save-buffer)
       (save-buffer editor-state buf kill-ring)
+
+      (= command :find-file)
+      (assoc editor-state
+             :minibuffer (ecro.minibuffer/prompt-for "Find file: " :open-file)
+             :key-sequence [])
+
+      :else
       (let [[new-buf new-kr] (case command
                                :forward-char [(core/forward-char buf) kill-ring]
                                :backward-char [(core/backward-char buf) kill-ring]
@@ -51,7 +60,6 @@
                                                  [buf (kr/kill-text kill-ring region)]
                                                  [buf kill-ring])
                                :yank [(kr/yank-text buf kill-ring) kill-ring]
-                               :find-file [(buffer/make-buffer "*new*") kill-ring]
                                [buf kill-ring])]
         (cond-> (state/assoc-current-buffer (assoc editor-state
                                                    :kill-ring new-kr

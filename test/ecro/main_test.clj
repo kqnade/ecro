@@ -351,3 +351,58 @@
     (let [state {:current-buffer (b/make-buffer "*scratch*")
                  :buffers []}]
       (is (= [] (:buffers state))))))
+
+
+(deftest test-find-file-activates-minibuffer
+  (testing "find-file command puts editor in minibuffer mode"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          ;; ESC f triggers find-file
+          esc-state (main/handle-key state 27 0)
+          new-state (main/handle-key esc-state 102 0)]
+      (is (some? (:minibuffer new-state)))
+      (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
+
+
+(deftest test-minibuffer-typing
+  (testing "typing in minibuffer mode adds characters"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)
+                 :minibuffer (ecro.minibuffer/prompt-for "Find file: " :open-file)}
+          state' (main/handle-key state 97 0)]
+      (is (= "a" (get-in state' [:minibuffer :buffer :text]))))))
+
+
+(deftest test-find-file-completes-and-opens
+  (testing "find-file opens file after minibuffer completion"
+    (let [test-file (str (System/getProperty "java.io.tmpdir")
+                         "/ecro_findfile_" (System/currentTimeMillis) ".txt")
+          _ (spit test-file "test content")
+          state {:current-buffer (b/make-buffer "test")
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)
+                 :minibuffer (assoc (ecro.minibuffer/prompt-for "Find file: " :open-file)
+                                    :buffer (assoc (b/make-buffer "*minibuffer*")
+                                                   :text test-file))}
+          completed-state (main/handle-key state 13 0)]
+      (is (nil? (:minibuffer completed-state)))
+      (is (= "test content" (:text (:current-buffer completed-state))))
+      (is (= (.getName (io/file test-file))
+             (:name (:current-buffer completed-state))))
+      (io/delete-file test-file true))))
+
+
+(deftest test-minibuffer-escape-cancels
+  (testing "escape in minibuffer mode cancels"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)
+                 :minibuffer (ecro.minibuffer/prompt-for "Find file: " :open-file)}
+          new-state (main/handle-key state 27 0)]
+      (is (nil? (:minibuffer new-state))))))

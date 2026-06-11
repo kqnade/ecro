@@ -23,13 +23,14 @@
 
 
 (deftest test-handle-key-esc-prefix-complete
-  (testing "ESC f completes find-file command"
+  (testing "ESC f activates find-file minibuffer"
     (let [state {:current-buffer (b/make-buffer "test")
                  :keymap bindings/default-keymap
                  :key-sequence ["ESC"]}
           new-state (key/handle-key state 102 0)] ; f after ESC
       (is (= [] (:key-sequence new-state)))
-      (is (not= "test" (:name (:current-buffer new-state)))))))
+      (is (some? (:minibuffer new-state)))
+      (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
 
 
 (deftest test-repeated-shift-arrow-keeps-selection-buffer

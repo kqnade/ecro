@@ -94,3 +94,11 @@
                  (mb/insert-char \x)
                  (mb/mx-execute registry))]
       (is (= :unknown-command (:result mb))))))
+
+
+(deftest test-prompt-for
+  (testing "prompt-for creates minibuffer with command"
+    (let [mb (mb/prompt-for "Find file: " :open-file)]
+      (is (= "Find file: " (:prompt mb)))
+      (is (= :open-file (:command mb)))
+      (is (= :minibuffer (:type mb))))))

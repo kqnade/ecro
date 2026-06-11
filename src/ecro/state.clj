@@ -16,7 +16,8 @@
      :buffers [scratch]
      :kill-ring (kr/make-kill-ring)
      :notification nil
-     :message nil}))
+     :message nil
+     :minibuffer nil}))
 
 
 (defn add-buffer
