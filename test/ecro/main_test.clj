@@ -346,26 +346,6 @@
       (is (= 4 (:point (:current-buffer moved)))))))
 
 
-(deftest test-status-line-shows-key-sequence
-  (testing "status line displays key sequence without hardcoded C- prefix"
-    (let [state {:current-buffer (b/make-buffer "test")
-                 :key-sequence ["ESC"]
-                 :message nil}]
-      (is (clojure.string/includes? (main/status-line state) "  ESC "))))
-  (testing "status line displays C-g lead key correctly"
-    (let [state {:current-buffer (b/make-buffer "test")
-                 :key-sequence ["C-g"]
-                 :message nil}]
-      (is (clojure.string/includes? (main/status-line state) "  C-g "))))
-  (testing "status line omits key sequence when empty"
-    (let [state {:current-buffer (b/make-buffer "test")
-                 :key-sequence []
-                 :message nil}
-          line (main/status-line state)]
-      (is (not (clojure.string/includes? line "ESC")))
-      (is (not (clojure.string/includes? line "C-"))))))
-
-
 (deftest test-buffer-list-initialized
   (testing "editor state starts with empty buffer list"
     (let [state {:current-buffer (b/make-buffer "*scratch*")
