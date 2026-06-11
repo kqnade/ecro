@@ -1,5 +1,6 @@
 (ns ecro.main-test
   (:require
+    [clojure.java.io :as io]
     [clojure.test :refer :all]
     [ecro.buffer :as b]
     [ecro.kill-ring :as kr]
@@ -124,6 +125,67 @@
       (is (= buf (:current-buffer new-state)))
       (is (= [buf] (:buffers new-state)))
       (is (= [] (:key-sequence new-state))))))
+
+
+(deftest test-esc-s-unnamed-buffer-notifies
+  (testing "ESC s on an unnamed buffer notifies that there is no file to save"
+    (let [buf (b/make-buffer "*scratch*")
+          state {:current-buffer buf
+                 :buffers [buf]
+                 :keymap main/default-keymap
+                 :key-sequence ["ESC"]
+                 :kill-ring (kr/make-kill-ring)
+                 :message nil}
+          new-state (main/handle-key state 115 0)]
+      (is (= {:level :warn :message "No file to save"}
+             (:notification new-state))))))
+
+
+(deftest test-esc-s-file-buffer-notifies-written
+  (testing "ESC s on a file buffer writes and notifies"
+    (let [test-file (str (System/getProperty "java.io.tmpdir")
+                         "/ecro_save_" (System/currentTimeMillis) ".txt")
+          buf (assoc (b/make-buffer "test.txt")
+                     :text "saved content"
+                     :filepath test-file)
+          state {:current-buffer buf
+                 :buffers [buf]
+                 :keymap main/default-keymap
+                 :key-sequence ["ESC"]
+                 :kill-ring (kr/make-kill-ring)
+                 :message nil}]
+      (try
+        (let [new-state (main/handle-key state 115 0)]
+          (is (= "saved content" (slurp test-file)))
+          (is (= {:level :info :message (str "Wrote " test-file)}
+                 (:notification new-state)))
+          (is (= "saved content" (:saved-text (:current-buffer new-state)))))
+        (finally
+          (io/delete-file test-file true))))))
+
+
+(deftest test-esc-s-save-failure-notifies
+  (testing "ESC s catches save failures and keeps the buffer"
+    (let [dir (io/file (System/getProperty "java.io.tmpdir")
+                       (str "ecro_save_dir_" (System/currentTimeMillis)))
+          _ (.mkdir dir)
+          buf (assoc (b/make-buffer "test.txt")
+                     :text "saved content"
+                     :filepath (.getPath dir))
+          state {:current-buffer buf
+                 :buffers [buf]
+                 :keymap main/default-keymap
+                 :key-sequence ["ESC"]
+                 :kill-ring (kr/make-kill-ring)
+                 :message nil}]
+      (try
+        (let [new-state (main/handle-key state 115 0)]
+          (is (= buf (:current-buffer new-state)))
+          (is (= :error (:level (:notification new-state))))
+          (is (clojure.string/starts-with? (:message (:notification new-state))
+                                           "Save failed: ")))
+        (finally
+          (io/delete-file dir true))))))
 
 
 (deftest test-control-slash-undo-integration

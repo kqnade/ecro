@@ -6,6 +6,7 @@
     [ecro.keymap :as keymap]
     [ecro.kill-ring :as kr]
     [ecro.native :as native]
+    [ecro.notification :as notification]
     [ecro.scroll :as scroll]
     [ecro.window :as window]))
 
@@ -47,6 +48,7 @@
          :frame nil
          :current-buffer nil
          :buffers []
+         :notification nil
          :message nil
          :kill-ring (kr/make-kill-ring)}))
 
@@ -162,34 +164,46 @@
   "Execute an editor command against state."
   [state command]
   (let [buf (:current-buffer state)
-        kill-ring (or (:kill-ring state) (kr/make-kill-ring))
-        [new-buf new-kr] (case command
-                           :forward-char [(core/forward-char buf) kill-ring]
-                           :backward-char [(core/backward-char buf) kill-ring]
-                           :next-line [(core/next-line buf) kill-ring]
-                           :previous-line [(core/previous-line buf) kill-ring]
-                           :move-beginning-of-line [(core/move-beginning-of-line buf) kill-ring]
-                           :move-end-of-line [(core/move-end-of-line buf) kill-ring]
-                           :kill-line (let [[new-buf killed] (kr/kill-line buf)]
-                                        [new-buf (kr/kill-text kill-ring killed)])
-                           :undo [(buffer/undo buf) kill-ring]
-                           :redo [(buffer/redo buf) kill-ring]
-                           :kill-region (if-let [mark (:mark buf)]
-                                          (let [[new-buf killed] (kr/kill-region buf mark (:point buf))]
+        kill-ring (or (:kill-ring state) (kr/make-kill-ring))]
+    (if (= command :save-buffer)
+      (let [[state' new-buf] (if-let [filepath (:filepath buf)]
+                               (try
+                                 [(notification/info state (str "Wrote " filepath))
+                                  (assoc (or (file/save-buffer buf) buf)
+                                         :saved-text (:text buf))]
+                                 (catch Exception e
+                                   [(notification/error state (str "Save failed: " (.getMessage e))) buf]))
+                               [(notification/warn state "No file to save") buf])]
+        (assoc-current-buffer (assoc state'
+                                     :kill-ring kill-ring
+                                     :key-sequence [])
+                              new-buf))
+      (let [[new-buf new-kr] (case command
+                               :forward-char [(core/forward-char buf) kill-ring]
+                               :backward-char [(core/backward-char buf) kill-ring]
+                               :next-line [(core/next-line buf) kill-ring]
+                               :previous-line [(core/previous-line buf) kill-ring]
+                               :move-beginning-of-line [(core/move-beginning-of-line buf) kill-ring]
+                               :move-end-of-line [(core/move-end-of-line buf) kill-ring]
+                               :kill-line (let [[new-buf killed] (kr/kill-line buf)]
                                             [new-buf (kr/kill-text kill-ring killed)])
-                                          [buf kill-ring])
-                           :kill-ring-save (if-let [region (buffer/region-text buf)]
-                                             [buf (kr/kill-text kill-ring region)]
-                                             [buf kill-ring])
-                           :yank [(kr/yank-text buf kill-ring) kill-ring]
-                           :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
-                           :save-buffer [(or (file/save-buffer buf) buf) kill-ring]
-                           [buf kill-ring])]
-    (cond-> (assoc-current-buffer (assoc state
-                                         :kill-ring new-kr
-                                         :key-sequence [])
-                                  new-buf)
-      (= command :quit) (assoc :running false))))
+                               :undo [(buffer/undo buf) kill-ring]
+                               :redo [(buffer/redo buf) kill-ring]
+                               :kill-region (if-let [mark (:mark buf)]
+                                              (let [[new-buf killed] (kr/kill-region buf mark (:point buf))]
+                                                [new-buf (kr/kill-text kill-ring killed)])
+                                              [buf kill-ring])
+                               :kill-ring-save (if-let [region (buffer/region-text buf)]
+                                                 [buf (kr/kill-text kill-ring region)]
+                                                 [buf kill-ring])
+                               :yank [(kr/yank-text buf kill-ring) kill-ring]
+                               :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
+                               [buf kill-ring])]
+        (cond-> (assoc-current-buffer (assoc state
+                                             :kill-ring new-kr
+                                             :key-sequence [])
+                                      new-buf)
+          (= command :quit) (assoc :running false))))))
 
 
 (defn status-line
@@ -202,7 +216,8 @@
                   (str (clojure.string/join " " (:key-sequence state)) " "))]
     (str " " name modified
          (when key-seq (str "  " key-seq))
-         "    " (:message state))))
+         "    " (or (notification/text (:notification state))
+                    (:message state)))))
 
 
 (defn render
@@ -390,6 +405,7 @@
                        :current-buffer scratch
                        :buffers [scratch]
                        :kill-ring (kr/make-kill-ring)
+                       :notification nil
                        :message nil})]
       ;; Initial render
       (render @state)
