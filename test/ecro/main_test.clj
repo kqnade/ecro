@@ -381,3 +381,20 @@
           buf2 (b/make-buffer "test.txt")
           state {:buffers [buf1 buf2]}]
       (is (= ["*scratch*" "test.txt"] (main/get-buffer-names state))))))
+
+
+(deftest test-current-buffer-edits-update-buffer-list
+  (testing "editing current buffer keeps buffer list synchronized"
+    (let [buf1 (b/make-buffer "*scratch*")
+          buf2 (b/make-buffer "other.txt")
+          state {:current-buffer buf1
+                 :buffers [buf1 buf2]
+                 :keymap main/default-keymap
+                 :key-sequence []
+                 :kill-ring (kr/make-kill-ring)}
+          typed (main/handle-key state 97 0)
+          switched-away (main/switch-to-buffer typed "other.txt")
+          switched-back (main/switch-to-buffer switched-away "*scratch*")]
+      (is (= "a" (:text (:current-buffer typed))))
+      (is (= "a" (:text (first (:buffers typed)))))
+      (is (= "a" (:text (:current-buffer switched-back)))))))

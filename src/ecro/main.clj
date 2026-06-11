@@ -59,15 +59,27 @@
   (update state :buffers conj buf))
 
 
+(defn assoc-current-buffer
+  "Set current buffer and keep the buffer list entry synchronized."
+  [state buf]
+  (let [state' (assoc state :current-buffer buf)]
+    (if-not (contains? state :buffers)
+      state'
+      (let [bufs (:buffers state)
+            exists? (some #(= (:name %) (:name buf)) bufs)
+            updated-bufs (mapv #(if (= (:name %) (:name buf)) buf %) bufs)]
+        (assoc state' :buffers (if exists?
+                                 updated-bufs
+                                 (conj updated-bufs buf)))))))
+
+
 (defn switch-to-buffer
   "Switch current buffer by name. Creates new buffer if not found."
   [state name]
   (if-let [buf (first (filter #(= (:name %) name) (:buffers state)))]
-    (assoc state :current-buffer buf)
+    (assoc-current-buffer state buf)
     (let [new-buf (buffer/make-buffer name)]
-      (-> state
-          (assoc :current-buffer new-buf)
-          (add-buffer new-buf)))))
+      (assoc-current-buffer state new-buf))))
 
 
 (defn kill-buffer
@@ -79,7 +91,7 @@
       (let [current-name (:name (:current-buffer state))]
         (cond-> (assoc state :buffers bufs)
           (= current-name name)
-          (assoc :current-buffer (first bufs)))))))
+          (assoc-current-buffer (first bufs)))))))
 
 
 (defn get-buffer-names
@@ -173,10 +185,10 @@
                            :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
                            :save-buffer [(file/save-buffer buf) kill-ring]
                            [buf kill-ring])]
-    (cond-> (assoc state
-                   :current-buffer new-buf
-                   :kill-ring new-kr
-                   :key-sequence [])
+    (cond-> (assoc-current-buffer (assoc state
+                                         :kill-ring new-kr
+                                         :key-sequence [])
+                                  new-buf)
       (= command :quit) (assoc :running false))))
 
 
@@ -241,15 +253,15 @@
   (cond
     ;; Backspace (DEL)
     (= key-code 127)
-    (update state :current-buffer buffer/delete-char-backward)
+    (assoc-current-buffer state (buffer/delete-char-backward (:current-buffer state)))
 
     ;; Enter (RET) - insert newline
     (= key-code 13)
-    (update state :current-buffer buffer/insert-newline)
+    (assoc-current-buffer state (buffer/insert-newline (:current-buffer state)))
 
     ;; Tab
     (= key-code 9)
-    (update state :current-buffer buffer/insert-tab)
+    (assoc-current-buffer state (buffer/insert-tab (:current-buffer state)))
 
     ;; Escape - prefix key
     (= key-code 27)
@@ -276,48 +288,46 @@
           b (if (shifted? modifiers)
               (or (:mark buf) (buffer/set-mark buf))
               (buffer/deactivate-mark buf))]
-      (assoc state :current-buffer (core/previous-line b)))
+      (assoc-current-buffer state (core/previous-line b)))
 
     (= key-code 1002)
     (let [buf (:current-buffer state)
           b (if (shifted? modifiers)
               (or (:mark buf) (buffer/set-mark buf))
               (buffer/deactivate-mark buf))]
-      (assoc state :current-buffer (core/next-line b)))
+      (assoc-current-buffer state (core/next-line b)))
 
     (= key-code 1003)
     (let [buf (:current-buffer state)
           b (if (shifted? modifiers)
               (or (:mark buf) (buffer/set-mark buf))
               (buffer/deactivate-mark buf))]
-      (assoc state :current-buffer (core/backward-char b)))
+      (assoc-current-buffer state (core/backward-char b)))
 
     (= key-code 1004)
     (let [buf (:current-buffer state)
           b (if (shifted? modifiers)
               (or (:mark buf) (buffer/set-mark buf))
               (buffer/deactivate-mark buf))]
-      (assoc state :current-buffer (core/forward-char b)))
+      (assoc-current-buffer state (core/forward-char b)))
 
     ;; Home
     (= key-code 1005)
-    (update state :current-buffer core/move-beginning-of-line)
+    (assoc-current-buffer state (core/move-beginning-of-line (:current-buffer state)))
 
     ;; End
     (= key-code 1006)
-    (update state :current-buffer core/move-end-of-line)
+    (assoc-current-buffer state (core/move-end-of-line (:current-buffer state)))
 
     ;; PageUp
     (= key-code 1007)
-    (update state :current-buffer (fn [buf]
-                                    (let [[_ h] (or (native/get-terminal-size) [80 24])]
-                                      (scroll/scroll-up buf (dec h)))))
+    (let [[_ h] (or (native/get-terminal-size) [80 24])]
+      (assoc-current-buffer state (scroll/scroll-up (:current-buffer state) (dec h))))
 
     ;; PageDown
     (= key-code 1008)
-    (update state :current-buffer (fn [buf]
-                                    (let [[_ h] (or (native/get-terminal-size) [80 24])]
-                                      (scroll/scroll-down buf (dec h)))))
+    (let [[_ h] (or (native/get-terminal-size) [80 24])]
+      (assoc-current-buffer state (scroll/scroll-down (:current-buffer state) (dec h))))
 
     ;; Insert
     (= key-code 1009)
@@ -325,7 +335,7 @@
 
     ;; Delete (forward delete)
     (= key-code 1010)
-    (update state :current-buffer buffer/delete-char-forward)
+    (assoc-current-buffer state (buffer/delete-char-forward (:current-buffer state)))
 
     ;; Function keys F1-F24
     (>= key-code 2000)
@@ -344,7 +354,7 @@
                  (>= key-code 32)
                  (< key-code 127))
           ;; Regular character input
-          (update state :current-buffer buffer/insert-char (char key-code))
+          (assoc-current-buffer state (buffer/insert-char (:current-buffer state) (char key-code)))
           (assoc state :key-sequence []))
 
         :else
