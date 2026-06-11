@@ -48,6 +48,19 @@
       (is (= 12 (:height (first (:children (:root-window new-frame)))))))))
 
 
+(deftest test-split-non-root-window-returns-unchanged
+  (testing "splitting a non-root window returns the frame unchanged"
+    (let [buf (b/make-buffer "test")
+          win (w/make-window buf 80 24)
+          frame (w/make-frame win)
+          frame2 (w/split-window-vertical frame (:root-window frame))
+          wins (w/get-windows frame2)
+          non-root (second wins)
+          result (w/split-window-vertical frame2 non-root)]
+      (is (= frame2 result))
+      (is (= 2 (count (w/get-windows result)))))))
+
+
 (deftest test-window-navigation
   (testing "navigating between windows"
     (let [buf (b/make-buffer "test")
