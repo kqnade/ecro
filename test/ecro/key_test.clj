@@ -30,3 +30,16 @@
           new-state (key/handle-key state 102 0)] ; f after ESC
       (is (= [] (:key-sequence new-state)))
       (is (not= "test" (:name (:current-buffer new-state)))))))
+
+
+(deftest test-repeated-shift-arrow-keeps-selection-buffer
+  (testing "repeated Shift+Right extends selection without replacing buffer with mark"
+    (let [state {:current-buffer (assoc (b/make-buffer "test") :text "abc")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          state' (key/handle-key state 1004 key/shift-modifier)
+          state'' (key/handle-key state' 1004 key/shift-modifier)
+          buf (:current-buffer state'')]
+      (is (= 0 (:mark buf)))
+      (is (= 2 (:point buf)))
+      (is (= "abc" (:text buf))))))

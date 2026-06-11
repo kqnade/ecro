@@ -52,7 +52,9 @@
 (defn- prepare-selection
   [buf modifiers]
   (if (shifted? modifiers)
-    (or (:mark buf) (buffer/set-mark buf))
+    (if (:mark buf)
+      buf
+      (buffer/set-mark buf))
     (buffer/deactivate-mark buf)))
 
 
