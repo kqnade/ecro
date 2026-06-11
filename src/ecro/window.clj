@@ -1,6 +1,7 @@
 (ns ecro.window
   (:require
-    [ecro.buffer :as b]))
+    [ecro.buffer :as b]
+    [ecro.window-tree :as wt]))
 
 
 (defn make-window
@@ -81,18 +82,10 @@
       frame)))
 
 
-(defn- collect-windows
-  "Collect all leaf windows from a window tree."
-  [window]
-  (if (= :window (:type window))
-    [window]
-    (mapcat collect-windows (:children window))))
-
-
 (defn get-windows
   "Get all leaf windows in a frame."
   [frame]
-  (collect-windows (:root-window frame)))
+  (wt/collect-windows (:root-window frame)))
 
 
 (defn next-window
