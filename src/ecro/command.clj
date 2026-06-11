@@ -51,7 +51,7 @@
                                                  [buf (kr/kill-text kill-ring region)]
                                                  [buf kill-ring])
                                :yank [(kr/yank-text buf kill-ring) kill-ring]
-                               :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
+                               :find-file [(buffer/make-buffer "*new*") kill-ring]
                                [buf kill-ring])]
         (cond-> (state/assoc-current-buffer (assoc editor-state
                                                    :kill-ring new-kr
