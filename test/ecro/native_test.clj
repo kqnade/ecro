@@ -23,11 +23,12 @@
 
 
 (deftest test-terminal-size
-  (testing "terminal size returns positive values"
+  (testing "terminal size returns positive values or nil on failure"
     (when lib-available?
-      (let [[width height] (native/get-terminal-size)]
-        (is (pos? width))
-        (is (pos? height))))))
+      (if-let [[width height] (native/get-terminal-size)]
+        (do (is (pos? width))
+            (is (pos? height)))
+        (is (nil? (native/get-terminal-size)))))))
 
 
 (deftest test-raw-mode

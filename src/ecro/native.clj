@@ -96,13 +96,13 @@
 
 
 (defn get-terminal-size
-  "Get terminal size as [width height]."
+  "Get terminal size as [width height], or nil on failure."
   []
   (when-let [lib @ecro-lib]
     (let [width (int-array 1)
           height (int-array 1)]
-      (.ecro_get_terminal_size lib width height)
-      [(aget width 0) (aget height 0)])))
+      (when (= 0 (.ecro_get_terminal_size lib width height))
+        [(aget width 0) (aget height 0)]))))
 
 
 (defn decode-event-data
