@@ -314,3 +314,70 @@
           line (main/status-line state)]
       (is (not (clojure.string/includes? line "ESC")))
       (is (not (clojure.string/includes? line "C-"))))))
+
+
+(deftest test-buffer-list-initialized
+  (testing "editor state starts with empty buffer list"
+    (let [state {:current-buffer (b/make-buffer "*scratch*")
+                 :buffers []}]
+      (is (= [] (:buffers state))))))
+
+
+(deftest test-add-buffer-to-list
+  (testing "adding a buffer appends to buffer list"
+    (let [buf1 (b/make-buffer "*scratch*")
+          buf2 (b/make-buffer "test.txt")
+          state {:current-buffer buf1
+                 :buffers [buf1]}
+          new-state (main/add-buffer state buf2)]
+      (is (= 2 (count (:buffers new-state))))
+      (is (= "test.txt" (:name (last (:buffers new-state))))))))
+
+
+(deftest test-switch-to-existing-buffer
+  (testing "switch-to-buffer changes current buffer to existing one"
+    (let [buf1 (b/make-buffer "*scratch*")
+          buf2 (b/make-buffer "test.txt")
+          state {:current-buffer buf1
+                 :buffers [buf1 buf2]}
+          new-state (main/switch-to-buffer state "test.txt")]
+      (is (= "test.txt" (:name (:current-buffer new-state)))))))
+
+
+(deftest test-switch-to-buffer-creates-new
+  (testing "switch-to-buffer creates new buffer if name not found"
+    (let [buf1 (b/make-buffer "*scratch*")
+          state {:current-buffer buf1
+                 :buffers [buf1]}
+          new-state (main/switch-to-buffer state "new.txt")]
+      (is (= "new.txt" (:name (:current-buffer new-state))))
+      (is (= 2 (count (:buffers new-state)))))))
+
+
+(deftest test-kill-buffer
+  (testing "kill-buffer removes buffer from list and switches to another"
+    (let [buf1 (b/make-buffer "*scratch*")
+          buf2 (b/make-buffer "test.txt")
+          state {:current-buffer buf2
+                 :buffers [buf1 buf2]}
+          new-state (main/kill-buffer state "test.txt")]
+      (is (= 1 (count (:buffers new-state))))
+      (is (= "*scratch*" (:name (:current-buffer new-state)))))))
+
+
+(deftest test-kill-buffer-keeps-last
+  (testing "kill-buffer keeps last buffer and shows message"
+    (let [buf1 (b/make-buffer "*scratch*")
+          state {:current-buffer buf1
+                 :buffers [buf1]}
+          new-state (main/kill-buffer state "*scratch*")]
+      (is (= 1 (count (:buffers new-state))))
+      (is (= "Can't kill last buffer" (:message new-state))))))
+
+
+(deftest test-get-buffer-names
+  (testing "get-buffer-names returns list of buffer names"
+    (let [buf1 (b/make-buffer "*scratch*")
+          buf2 (b/make-buffer "test.txt")
+          state {:buffers [buf1 buf2]}]
+      (is (= ["*scratch*" "test.txt"] (main/get-buffer-names state))))))

@@ -46,8 +46,46 @@
          :keymap default-keymap
          :frame nil
          :current-buffer nil
+         :buffers []
          :message nil
          :kill-ring (kr/make-kill-ring)}))
+
+
+;; Buffer list management
+
+(defn add-buffer
+  "Add a buffer to the editor state's buffer list."
+  [state buf]
+  (update state :buffers conj buf))
+
+
+(defn switch-to-buffer
+  "Switch current buffer by name. Creates new buffer if not found."
+  [state name]
+  (if-let [buf (first (filter #(= (:name %) name) (:buffers state)))]
+    (assoc state :current-buffer buf)
+    (let [new-buf (buffer/make-buffer name)]
+      (-> state
+          (assoc :current-buffer new-buf)
+          (add-buffer new-buf)))))
+
+
+(defn kill-buffer
+  "Kill buffer by name. Switches to another buffer if killing current."
+  [state name]
+  (let [bufs (filterv #(not= (:name %) name) (:buffers state))]
+    (if (empty? bufs)
+      (assoc state :message "Can't kill last buffer")
+      (let [current-name (:name (:current-buffer state))]
+        (cond-> (assoc state :buffers bufs)
+          (= current-name name)
+          (assoc :current-buffer (first bufs)))))))
+
+
+(defn get-buffer-names
+  "Return list of all buffer names."
+  [state]
+  (map :name (:buffers state)))
 
 
 ;; Screen buffer for diff rendering
@@ -334,11 +372,13 @@
     (native/enable-raw-mode)
     (native/enter-alternate-screen)
 
-    (let [state (atom {:running true
+    (let [scratch (buffer/make-buffer "*scratch*")
+          state (atom {:running true
                        :key-sequence []
                        :keymap default-keymap
                        :frame nil
-                       :current-buffer (buffer/make-buffer "*scratch*")
+                       :current-buffer scratch
+                       :buffers [scratch]
                        :kill-ring (kr/make-kill-ring)
                        :message nil})]
       ;; Initial render
