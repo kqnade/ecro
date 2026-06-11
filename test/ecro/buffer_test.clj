@@ -10,7 +10,9 @@
     (let [buf (b/make-buffer "*test*")]
       (is (= "*test*" (:name buf)))
       (is (= "" (:text buf)))
-      (is (= 0 (:point buf))))))
+      (is (= 0 (:point buf)))
+      (is (= "" (:saved-text buf)))
+      (is (not (b/modified? buf))))))
 
 
 (deftest test-insert-char

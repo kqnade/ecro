@@ -16,7 +16,8 @@
     :undo-stack []
     :redo-stack []
     :tab-width (get opts :tab-width 2)
-    :indent-tabs-mode (get opts :indent-tabs-mode false)}))
+    :indent-tabs-mode (get opts :indent-tabs-mode false)
+    :saved-text ""}))
 
 
 (defn insert-char
@@ -159,3 +160,9 @@
           end (max mark (:point buf))
           text (:text buf)]
       (subs text start end))))
+
+
+(defn modified?
+  "Return true if buffer has unsaved changes."
+  [buf]
+  (not= (:text buf) (:saved-text buf)))

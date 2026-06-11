@@ -9,9 +9,11 @@
   [filepath]
   (let [file (io/file filepath)]
     (if (.exists file)
-      (assoc (b/make-buffer (.getName file))
-             :text (slurp file)
-             :filepath filepath)
+      (let [text (slurp file)]
+        (assoc (b/make-buffer (.getName file))
+               :text text
+               :saved-text text
+               :filepath filepath))
       (assoc (b/make-buffer (.getName file))
              :text ""
              :filepath filepath))))
