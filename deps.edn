@@ -1,5 +1,6 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.5"}
-        net.java.dev.jna/jna {:mvn/version "5.19.0"}}
+        net.java.dev.jna/jna {:mvn/version "5.19.0"}
+        org.babashka/sci {:mvn/version "0.8.41"}}
  :paths ["src" "resources"]
  :jvm-opts ["--enable-native-access=ALL-UNNAMED"
             "-Djna.library.path=rust/ecro-core/target/release"]

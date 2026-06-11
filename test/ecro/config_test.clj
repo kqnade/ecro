@@ -39,3 +39,22 @@
     (let [default (cfg/default-config)]
       (is (contains? default :theme))
       (is (contains? default :keymap)))))
+
+
+(deftest test-load-sci-config
+  (testing "loading init.clj via SCI evaluates code"
+    (let [test-file (str (System/getProperty "java.io.tmpdir") "/ecro_init_" (System/currentTimeMillis) ".clj")
+          counter (atom 0)]
+      (try
+        (spit test-file "(swap! counter inc)")
+        (let [result (cfg/load-sci-config test-file {'counter counter})]
+          (is (= 1 @counter))
+          (is (map? result)))
+        (finally
+          (clojure.java.io/delete-file test-file true))))))
+
+
+(deftest test-load-sci-config-missing-file
+  (testing "loading missing init.clj returns empty map"
+    (let [result (cfg/load-sci-config "/tmp/nonexistent_ecro_init.clj" {})]
+      (is (= {} result)))))
