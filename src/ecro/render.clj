@@ -82,9 +82,10 @@
           (print (str "\033[" (inc idx) ";1H" rendered)))))
     (doseq [idx (range (count visible-lines) (- height 1))]
       (update-screen-line idx (get old-screen idx) "" width))
-    (let [status (status-line state)]
+    (let [status (status-line state)
+          status-line-rendered (screen-line (or status "") width 1)]
       (print (str "\033[" height ";1H\033[7m"
-                  (format (str "%-" width "s") (or status ""))
+                  status-line-rendered
                   "\033[0m")))
     (let [point (:point buf 0)
           text (:text buf "")

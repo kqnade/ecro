@@ -24,3 +24,14 @@
           line (render/status-line state)]
       (is (not (str/includes? line "ESC")))
       (is (not (str/includes? line "C-"))))))
+
+
+(deftest test-status-line-truncated-to-width
+  (testing "status line is truncated to given width"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :name "very-long-file-name-that-exceeds-width")
+                 :key-sequence []
+                 :message nil}
+          line (render/status-line state)]
+      (is (= 10 (count (render/screen-line line 10 2))))
+      (is (= 20 (count (render/screen-line line 20 2)))))))
