@@ -72,15 +72,25 @@
       (is (nil? (mb/execute-command registry :unknown []))))))
 
 
-(deftest test-minibuffer-mx
-  (testing "M-x with command execution"
+(deftest test-minibuffer-mx-executes-command
+  (testing "M-x reads minibuffer text and executes command"
     (let [registry (atom {})
-          _ (mb/register-command registry :test-cmd (fn [] "done"))
+          _ (mb/register-command registry :test (fn [] "done"))
           mb (-> (mb/make-minibuffer)
                  (mb/set-prompt "M-x ")
                  (mb/insert-char \t)
                  (mb/insert-char \e)
                  (mb/insert-char \s)
                  (mb/insert-char \t)
-                 (mb/complete))]
-      (is (= "test" (:result mb))))))
+                 (mb/mx-execute registry))]
+      (is (= "test" (:result mb)))
+      (is (= "done" (mb/execute-command registry :test []))))))
+
+
+(deftest test-minibuffer-mx-unknown-command
+  (testing "M-x with unknown command returns :unknown-command"
+    (let [registry (atom {})
+          mb (-> (mb/make-minibuffer)
+                 (mb/insert-char \x)
+                 (mb/mx-execute registry))]
+      (is (= :unknown-command (:result mb))))))
