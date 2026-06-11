@@ -112,6 +112,20 @@
       (is (= [] (:key-sequence new-state))))))
 
 
+(deftest test-esc-s-unnamed-buffer-keeps-current-buffer
+  (testing "ESC s on an unnamed buffer does not replace current buffer with nil"
+    (let [buf (b/make-buffer "*scratch*")
+          state {:current-buffer buf
+                 :buffers [buf]
+                 :keymap main/default-keymap
+                 :key-sequence ["ESC"]
+                 :kill-ring (kr/make-kill-ring)}
+          new-state (main/handle-key state 115 0)]
+      (is (= buf (:current-buffer new-state)))
+      (is (= [buf] (:buffers new-state)))
+      (is (= [] (:key-sequence new-state))))))
+
+
 (deftest test-control-slash-undo-integration
   (testing "C-/ undoes buffer edits"
     (let [state {:current-buffer (-> (b/make-buffer "test")

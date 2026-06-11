@@ -183,7 +183,7 @@
                                              [buf kill-ring])
                            :yank [(kr/yank-text buf kill-ring) kill-ring]
                            :find-file [(file/find-file "/tmp/ecro_test.txt") kill-ring]
-                           :save-buffer [(file/save-buffer buf) kill-ring]
+                           :save-buffer [(or (file/save-buffer buf) buf) kill-ring]
                            [buf kill-ring])]
     (cond-> (assoc-current-buffer (assoc state
                                          :kill-ring new-kr
