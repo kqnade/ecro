@@ -5,7 +5,8 @@
     [ecro.file :as file]
     [ecro.kill-ring :as kr]
     [ecro.notification :as notification]
-    [ecro.state :as state]))
+    [ecro.state :as state]
+    [ecro.undo :as undo]))
 
 
 (defn- save-buffer
@@ -40,8 +41,8 @@
                                :move-end-of-line [(core/move-end-of-line buf) kill-ring]
                                :kill-line (let [[new-buf killed] (kr/kill-line buf)]
                                             [new-buf (kr/kill-text kill-ring killed)])
-                               :undo [(buffer/undo buf) kill-ring]
-                               :redo [(buffer/redo buf) kill-ring]
+                               :undo [(undo/undo buf) kill-ring]
+                               :redo [(undo/redo buf) kill-ring]
                                :kill-region (if-let [mark (:mark buf)]
                                               (let [[new-buf killed] (kr/kill-region buf mark (:point buf))]
                                                 [new-buf (kr/kill-text kill-ring killed)])

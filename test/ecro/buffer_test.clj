@@ -1,7 +1,8 @@
 (ns ecro.buffer-test
   (:require
     [clojure.test :refer :all]
-    [ecro.buffer :as b]))
+    [ecro.buffer :as b]
+    [ecro.undo :as undo]))
 
 
 (deftest test-create-buffer
@@ -130,7 +131,7 @@
   (testing "undo single character insert"
     (let [buf (-> (b/make-buffer "test")
                   (b/insert-char \a)
-                  (b/undo))]
+                  (undo/undo))]
       (is (= "" (:text buf)))
       (is (= 0 (:point buf))))))
 
@@ -141,7 +142,7 @@
                   (b/insert-char \a)
                   (b/insert-char \b)
                   (b/insert-char \c)
-                  (b/undo))]
+                  (undo/undo))]
       (is (= "ab" (:text buf)))
       (is (= 2 (:point buf))))))
 
@@ -150,8 +151,8 @@
   (testing "redo after undo restores text"
     (let [buf (-> (b/make-buffer "test")
                   (b/insert-char \a)
-                  (b/undo)
-                  (b/redo))]
+                  (undo/undo)
+                  (undo/redo))]
       (is (= "a" (:text buf)))
       (is (= 1 (:point buf))))))
 
@@ -163,7 +164,7 @@
                   (b/insert-char \b)
                   (b/move-point-backward)
                   (b/delete-char-forward)
-                  (b/undo))]
+                  (undo/undo))]
       (is (= "ab" (:text buf)))
       (is (= 2 (:point buf))))))
 
@@ -171,14 +172,14 @@
 (deftest test-undo-stack-boundary
   (testing "undo at empty stack does nothing"
     (let [buf (b/make-buffer "test")]
-      (is (= buf (b/undo buf))))))
+      (is (= buf (undo/undo buf))))))
 
 
 (deftest test-redo-stack-boundary
   (testing "redo with empty redo stack does nothing"
     (let [buf (-> (b/make-buffer "test")
                   (b/insert-char \a))]
-      (is (= buf (b/redo buf))))))
+      (is (= buf (undo/redo buf))))))
 
 
 (deftest test-new-operation-clears-redo-stack
@@ -186,7 +187,7 @@
     (let [buf (-> (b/make-buffer "test")
                   (b/insert-char \a)
                   (b/insert-char \b)
-                  (b/undo)
+                  (undo/undo)
                   (b/insert-char \c))]
       (is (= "ac" (:text buf)))
       (is (= 2 (:point buf))))))

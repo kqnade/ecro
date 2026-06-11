@@ -1,4 +1,6 @@
-(ns ecro.buffer)
+(ns ecro.buffer
+  (:require
+    [ecro.undo :as undo]))
 
 
 (defn make-buffer
@@ -17,14 +19,6 @@
     :indent-tabs-mode (get opts :indent-tabs-mode false)}))
 
 
-(defn- record-operation
-  "Record an operation onto the undo stack and clear redo stack."
-  [buf op]
-  (-> buf
-      (update :undo-stack conj op)
-      (assoc :redo-stack [])))
-
-
 (defn insert-char
   "Insert a character at the current point and advance point."
   [buf ch]
@@ -33,9 +27,9 @@
         new-buf (assoc buf
                        :text (str (subs text 0 point) ch (subs text point))
                        :point (inc point))]
-    (record-operation new-buf {:type :insert
-                               :char ch
-                               :point point})))
+    (undo/record-operation new-buf {:type :insert
+                                    :char ch
+                                    :point point})))
 
 
 (defn insert-text
@@ -44,10 +38,10 @@
   (let [point (:point buf)
         old-text (:text buf)
         new-text (str (subs old-text 0 point) text (subs old-text point))]
-    (record-operation (assoc buf :text new-text :point (+ point (count text)))
-                      {:type :insert-text
-                       :text text
-                       :point point})))
+    (undo/record-operation (assoc buf :text new-text :point (+ point (count text)))
+                           {:type :insert-text
+                            :text text
+                            :point point})))
 
 
 (defn delete-char-forward
@@ -58,9 +52,9 @@
     (if (< point (count text))
       (let [deleted-char (get text point)
             new-buf (assoc buf :text (str (subs text 0 point) (subs text (inc point))))]
-        (record-operation new-buf {:type :delete
-                                   :char deleted-char
-                                   :point point}))
+        (undo/record-operation new-buf {:type :delete
+                                        :char deleted-char
+                                        :point point}))
       buf)))
 
 
@@ -70,10 +64,10 @@
   (let [text (:text buf)
         deleted (subs text start end)
         new-text (str (subs text 0 start) (subs text end))]
-    (record-operation (assoc buf :text new-text :point start :mark nil)
-                      {:type :delete-text
-                       :text deleted
-                       :point start})))
+    (undo/record-operation (assoc buf :text new-text :point start :mark nil)
+                           {:type :delete-text
+                            :text deleted
+                            :point start})))
 
 
 (defn delete-char-backward
@@ -86,9 +80,9 @@
             new-buf (assoc buf
                            :text (str (subs text 0 (dec point)) (subs text point))
                            :point (dec point))]
-        (record-operation new-buf {:type :delete
-                                   :char deleted-char
-                                   :point (dec point)}))
+        (undo/record-operation new-buf {:type :delete
+                                        :char deleted-char
+                                        :point (dec point)}))
       buf)))
 
 
@@ -142,82 +136,6 @@
     (if (> point 0)
       (assoc buf :point (dec point))
       buf)))
-
-
-(defn undo
-  "Undo the last operation."
-  [buf]
-  (if (seq (:undo-stack buf))
-    (let [op (peek (:undo-stack buf))
-          text (:text buf)
-          point (:point buf)]
-      (case (:type op)
-        :insert (let [op-point (:point op)]
-                  (-> buf
-                      (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
-                             :point op-point)
-                      (update :undo-stack pop)
-                      (update :redo-stack conj op)))
-        :insert-text (let [op-point (:point op)
-                           txt (:text op)]
-                       (-> buf
-                           (assoc :text (str (subs text 0 op-point) (subs text (+ op-point (count txt))))
-                                  :point op-point)
-                           (update :undo-stack pop)
-                           (update :redo-stack conj op)))
-        :delete (let [op-point (:point op)
-                      ch (:char op)]
-                  (-> buf
-                      (assoc :text (str (subs text 0 op-point) ch (subs text op-point))
-                             :point (inc op-point))
-                      (update :undo-stack pop)
-                      (update :redo-stack conj op)))
-        :delete-text (let [op-point (:point op)
-                           txt (:text op)]
-                       (-> buf
-                           (assoc :text (str (subs text 0 op-point) txt (subs text op-point))
-                                  :point (+ op-point (count txt)))
-                           (update :undo-stack pop)
-                           (update :redo-stack conj op)))))
-    buf))
-
-
-(defn redo
-  "Redo the last undone operation."
-  [buf]
-  (if (seq (:redo-stack buf))
-    (let [op (peek (:redo-stack buf))
-          text (:text buf)
-          point (:point buf)]
-      (case (:type op)
-        :insert (let [op-point (:point op)
-                      ch (:char op)]
-                  (-> buf
-                      (assoc :text (str (subs text 0 op-point) ch (subs text op-point))
-                             :point (inc op-point))
-                      (update :redo-stack pop)
-                      (update :undo-stack conj op)))
-        :insert-text (let [op-point (:point op)
-                           txt (:text op)]
-                       (-> buf
-                           (assoc :text (str (subs text 0 op-point) txt (subs text op-point))
-                                  :point (+ op-point (count txt)))
-                           (update :redo-stack pop)
-                           (update :undo-stack conj op)))
-        :delete (let [op-point (:point op)]
-                  (-> buf
-                      (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
-                             :point op-point)
-                      (update :redo-stack pop)
-                      (update :undo-stack conj op)))
-        :delete-text (let [op-point (:point op)
-                           txt (:text op)]
-                       (-> buf
-                           (assoc :text (str (subs text 0 op-point) (subs text (+ op-point (count txt))))
-                                  :point op-point)
-                           (update :redo-stack pop)
-                           (update :undo-stack conj op)))))
-    buf))
 
 
 (defn set-mark
