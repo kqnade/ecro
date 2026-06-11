@@ -1,14 +1,17 @@
 {:deps {org.clojure/clojure {:mvn/version "1.12.5"}
         net.java.dev.jna/jna {:mvn/version "5.19.0"}}
  :paths ["src" "resources"]
- :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
+ :jvm-opts ["--enable-native-access=ALL-UNNAMED"
+            "-Djna.library.path=rust/ecro-core/target/release"]
  :aliases
  {:test {:extra-paths ["test"]
          :main-opts ["-m" "cognitect.test-runner"]
-         :jvm-opts ["--enable-native-access=ALL-UNNAMED"]
+         :jvm-opts ["--enable-native-access=ALL-UNNAMED"
+                    "-Djna.library.path=rust/ecro-core/target/release"]
          :extra-deps {io.github.cognitect-labs/test-runner
                       {:git/tag "v0.5.1" :git/sha "dfb30dd"}}}
   :native-image
   {:main-opts ["-m" "ecro.main"]
-   :jvm-opts ["--enable-native-access=ALL-UNNAMED"
-              "-Dclojure.compiler.direct-linking=true"]}}}
+    :jvm-opts ["--enable-native-access=ALL-UNNAMED"
+               "-Djna.library.path=rust/ecro-core/target/release"
+               "-Dclojure.compiler.direct-linking=true"]}}}
