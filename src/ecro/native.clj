@@ -105,6 +105,19 @@
       [(aget width 0) (aget height 0)])))
 
 
+(defn decode-event-data
+  "Decode raw event fields into a Clojure event map."
+  [event-type key-code modifiers]
+  {:type (case event-type
+           1 :key
+           2 :resize
+           :unknown)
+   :key_code key-code
+   :modifiers modifiers
+   :width key-code
+   :height modifiers})
+
+
 (defn poll-event
   "Poll for a terminal event. Returns nil if no event."
   []
@@ -112,17 +125,10 @@
     (let [event-ptr (.ecro_poll_event lib)]
       (when-not (= Pointer/NULL event-ptr)
         (try
-          (let [event_type (.getInt event-ptr 0)
-                key_code (.getInt event-ptr 4)
-                modifiers (.getInt event-ptr 8)]
-            {:type (case event_type
-                     1 :key
-                     2 :resize
-                     :unknown)
-             :key_code key_code
-             :modifiers modifiers
-             :width key_code
-             :height modifiers})
+          (decode-event-data
+            (.getInt event-ptr 0)
+            (.getInt event-ptr 4)
+            (.getInt event-ptr 8))
           (finally
             (.ecro_free_event lib event-ptr)))))))
 
@@ -134,16 +140,9 @@
     (let [event-ptr (.ecro_read_event lib)]
       (when-not (= Pointer/NULL event-ptr)
         (try
-          (let [event_type (.getInt event-ptr 0)
-                key_code (.getInt event-ptr 4)
-                modifiers (.getInt event-ptr 8)]
-            {:type (case event_type
-                     1 :key
-                     2 :resize
-                     :unknown)
-             :key_code key_code
-             :modifiers modifiers
-             :width key_code
-             :height modifiers})
+          (decode-event-data
+            (.getInt event-ptr 0)
+            (.getInt event-ptr 4)
+            (.getInt event-ptr 8))
           (finally
             (.ecro_free_event lib event-ptr)))))))

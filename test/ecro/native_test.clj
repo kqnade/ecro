@@ -51,3 +51,13 @@
   (testing "poll event returns nil when no event"
     (when lib-available?
       (is (nil? (native/poll-event))))))
+
+
+(deftest test-decode-event-data
+  (testing "decode-event-data maps raw ints to event map"
+    (is (= {:type :key :key_code 65 :modifiers 0 :width 65 :height 0}
+           (native/decode-event-data 1 65 0)))
+    (is (= {:type :resize :key_code 80 :modifiers 24 :width 80 :height 24}
+           (native/decode-event-data 2 80 24)))
+    (is (= {:type :unknown :key_code 0 :modifiers 0 :width 0 :height 0}
+           (native/decode-event-data 99 0 0)))))
