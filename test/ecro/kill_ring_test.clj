@@ -2,7 +2,8 @@
   (:require
     [clojure.test :refer :all]
     [ecro.buffer :as b]
-    [ecro.kill-ring :as kr]))
+    [ecro.kill-ring :as kr]
+    [ecro.undo :as undo]))
 
 
 (deftest test-make-kill-ring
@@ -74,6 +75,18 @@
           [new-buf killed] (kr/kill-line buf)]
       (is (= "hello" (:text new-buf)))
       (is (= " world" killed)))))
+
+
+(deftest test-kill-line-is-undoable
+  (testing "kill-line can be undone"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello world")
+                  (assoc :point 5))
+          [new-buf _killed] (kr/kill-line buf)
+          undone (undo/undo new-buf)]
+      (is (= "hello" (:text new-buf)))
+      (is (= "hello world" (:text undone)))
+      (is (= 5 (:point undone))))))
 
 
 (deftest test-kill-region

@@ -36,10 +36,12 @@
                     (update :undo-stack pop)
                     (update :redo-stack conj op)))
       :delete-text (let [op-point (:point op)
-                         txt (:text op)]
+                         txt (:text op)
+                         original-point (or (:original-point op)
+                                            (+ op-point (count txt)))]
                      (-> buf
                          (assoc :text (str (subs text 0 op-point) txt (subs text op-point))
-                                :point (+ op-point (count txt)))
+                                :point original-point)
                          (update :undo-stack pop)
                          (update :redo-stack conj op))))))
 

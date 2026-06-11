@@ -56,9 +56,8 @@
         text (:text buf)
         next-newline (clojure.string/index-of text "\n" point)
         end (or next-newline (count text))
-        killed (subs text point end)
-        new-text (str (subs text 0 point) (subs text end))]
-    [(assoc buf :text new-text) killed]))
+        killed (subs text point end)]
+    [(b/delete-text buf point end) killed]))
 
 
 (defn kill-region

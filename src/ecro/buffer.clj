@@ -67,7 +67,8 @@
     (undo/record-operation (assoc buf :text new-text :point start :mark nil)
                            {:type :delete-text
                             :text deleted
-                            :point start})))
+                            :point start
+                            :original-point (:point buf)})))
 
 
 (defn delete-char-backward
