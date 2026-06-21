@@ -49,3 +49,21 @@
       (is (map? (:keymap fundamental)))
       (is (map? (:keymap text)))
       (is (= :fundamental-mode (:parent text))))))
+
+
+(deftest test-minor-mode-toggle
+  (testing "toggling a minor mode adds it to the buffer"
+    (let [buf (mode/toggle-minor-mode {} :foo-mode)]
+      (is (= #{:foo-mode} (:minor-modes buf)))
+      (is (mode/minor-mode-active? buf :foo-mode))))
+  (testing "toggling an active minor mode removes it"
+    (let [buf (-> {}
+                  (mode/toggle-minor-mode :foo-mode)
+                  (mode/toggle-minor-mode :foo-mode))]
+      (is (empty? (:minor-modes buf)))
+      (is (not (mode/minor-mode-active? buf :foo-mode)))))
+  (testing "multiple minor modes can coexist"
+    (let [buf (-> {}
+                  (mode/toggle-minor-mode :foo-mode)
+                  (mode/toggle-minor-mode :bar-mode))]
+      (is (= #{:foo-mode :bar-mode} (:minor-modes buf))))))

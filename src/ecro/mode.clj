@@ -57,3 +57,19 @@
     (let [source (or (:filepath buf) (:name buf) "")
           mode (mode-from-buffer-name source)]
       (assoc buf :mode mode))))
+
+
+(defn toggle-minor-mode
+  "Toggle a minor mode keyword on a buffer. Returns updated buffer."
+  [buf mode-kw]
+  (let [modes (set (:minor-modes buf))]
+    (assoc buf :minor-modes
+           (if (contains? modes mode-kw)
+             (disj modes mode-kw)
+             (conj modes mode-kw)))))
+
+
+(defn minor-mode-active?
+  "Return true if the given minor mode is active on the buffer."
+  [buf mode-kw]
+  (contains? (set (:minor-modes buf)) mode-kw))
