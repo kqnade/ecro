@@ -142,6 +142,25 @@
       (is (= "existing" (kr/yank result))))))
 
 
+(deftest test-yank-pop-text
+  (testing "yank-pop replaces previous yank with next kill-ring entry"
+    (let [kr (-> (kr/make-kill-ring)
+                 (kr/kill-text "first")
+                 (kr/kill-text "second"))
+          buf (-> (b/make-buffer "test")
+                  (kr/yank-text kr))
+          [popped-buf popped-kr] (kr/yank-pop-text buf kr)]
+      (is (= "first" (:text popped-buf)))
+      (is (= 5 (:point popped-buf)))
+      (is (= 1 (:index popped-kr)))))
+  (testing "yank-pop does nothing when there was no previous yank"
+    (let [buf (b/make-buffer "test")
+          kr (kr/make-kill-ring)
+          [new-buf new-kr] (kr/yank-pop-text buf kr)]
+      (is (= "" (:text new-buf)))
+      (is (= new-kr kr)))))
+
+
 (deftest test-yank-text
   (testing "yank-text inserts kill ring entry at point"
     (let [buf (-> (b/make-buffer "test")

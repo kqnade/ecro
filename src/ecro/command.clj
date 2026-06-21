@@ -60,6 +60,7 @@
                                                  [buf (kr/kill-text kill-ring region)]
                                                  [buf kill-ring])
                                :yank [(kr/yank-text buf kill-ring) kill-ring]
+                               :yank-pop (kr/yank-pop-text buf kill-ring)
                                [buf kill-ring])]
         (cond-> (state/assoc-current-buffer (assoc editor-state
                                                    :kill-ring new-kr

@@ -79,8 +79,25 @@
 
 
 (defn yank-text
-  "Insert current kill ring entry at point. Returns updated buffer."
+  "Insert current kill ring entry at point. Returns updated buffer
+   with :last-yank metadata for yank-pop."
   [buf kr]
   (if-let [text (yank kr)]
-    (b/insert-text buf text)
+    (let [start (:point buf)
+          new-buf (b/insert-text buf text)]
+      (assoc new-buf :last-yank {:start start :length (count text)}))
     buf))
+
+
+(defn yank-pop-text
+  "Replace the last yank with the next kill-ring entry.
+   Returns updated buffer and kill ring."
+  [buf kr]
+  (if-let [{:keys [start length]} (:last-yank buf)]
+    (let [next-kr (yank-pop kr)
+          text (yank next-kr)
+          trimmed (str (subs (:text buf) 0 start)
+                       (subs (:text buf) (+ start length)))
+          new-buf (b/insert-text (assoc buf :text trimmed :point start) text)]
+      [(assoc new-buf :last-yank {:start start :length (count text)}) next-kr])
+    [buf kr]))
