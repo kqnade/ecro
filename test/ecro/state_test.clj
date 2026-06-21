@@ -57,6 +57,24 @@
       (is (= "Can't kill last buffer" (:message new-state))))))
 
 
+(deftest test-list-buffers
+  (testing "list-buffers creates a *Buffer List* buffer with names"
+    (let [buf1 (b/make-buffer "*scratch*")
+          buf2 (b/make-buffer "test.txt")
+          state {:current-buffer buf1 :buffers [buf1 buf2]}
+          new-state (state/list-buffers state)]
+      (is (= "*Buffer List*" (:name (:current-buffer new-state))))
+      (is (= "*scratch*\ntest.txt" (:text (:current-buffer new-state))))
+      (is (= "2 buffers" (:message new-state)))))
+  (testing "list-buffers reuses existing *Buffer List* buffer"
+    (let [buf1 (b/make-buffer "*scratch*")
+          list-buf (b/make-buffer "*Buffer List*")
+          state {:current-buffer list-buf :buffers [buf1 list-buf]}
+          new-state (state/list-buffers state)]
+      (is (= 2 (count (:buffers new-state))))
+      (is (= "*scratch*" (:text (:current-buffer new-state)))))))
+
+
 (deftest test-get-buffer-names
   (testing "get-buffer-names returns list of buffer names"
     (let [buf1 (b/make-buffer "*scratch*")

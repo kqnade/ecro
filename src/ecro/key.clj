@@ -71,6 +71,10 @@
           :open-file (let [new-buf (file/find-file input)]
                        (-> (assoc state :minibuffer nil)
                            (state/assoc-current-buffer new-buf)))
+          :switch-to-buffer (-> (state/switch-to-buffer state input)
+                                (assoc :minibuffer nil))
+          :kill-buffer (-> (state/kill-buffer state input)
+                           (assoc :minibuffer nil))
           (assoc state :minibuffer nil)))
 
       (= key-code 27)  ; Escape - cancel

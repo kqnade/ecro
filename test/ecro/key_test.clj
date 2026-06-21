@@ -33,6 +33,32 @@
       (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
 
 
+(deftest test-minibuffer-switch-to-buffer
+  (testing "minibuffer Enter switches to named buffer"
+    (let [state {:minibuffer {:buffer {:text "other.clj"}
+                              :command :switch-to-buffer
+                              :prompt "Switch to buffer: "}
+                 :current-buffer {:name "*scratch*" :text "" :point 0}
+                 :buffers [{:name "*scratch*" :text "" :point 0}]}
+          new-state (key/handle-key state 13 0)]
+      (is (nil? (:minibuffer new-state)))
+      (is (= "other.clj" (:name (:current-buffer new-state)))))))
+
+
+(deftest test-minibuffer-kill-buffer
+  (testing "minibuffer Enter kills named buffer"
+    (let [state {:minibuffer {:buffer {:text "other.clj"}
+                              :command :kill-buffer
+                              :prompt "Kill buffer: "}
+                 :current-buffer {:name "*scratch*" :text "" :point 0}
+                 :buffers [{:name "*scratch*" :text "" :point 0}
+                           {:name "other.clj" :text "" :point 0}]}
+          new-state (key/handle-key state 13 0)]
+      (is (nil? (:minibuffer new-state)))
+      (is (= 1 (count (:buffers new-state))))
+      (is (= "*scratch*" (:name (:current-buffer new-state)))))))
+
+
 (deftest test-repeated-shift-arrow-keeps-selection-buffer
   (testing "repeated Shift+Right extends selection without replacing buffer with mark"
     (let [state {:current-buffer (assoc (b/make-buffer "test") :text "abc")

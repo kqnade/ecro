@@ -40,6 +40,19 @@
              :minibuffer (ecro.minibuffer/prompt-for "Find file: " :open-file)
              :key-sequence [])
 
+      (= command :switch-to-buffer)
+      (assoc editor-state
+             :minibuffer (ecro.minibuffer/prompt-for "Switch to buffer: " :switch-to-buffer)
+             :key-sequence [])
+
+      (= command :kill-buffer)
+      (assoc editor-state
+             :minibuffer (ecro.minibuffer/prompt-for "Kill buffer: " :kill-buffer)
+             :key-sequence [])
+
+      (= command :list-buffers)
+      (state/list-buffers editor-state)
+
       :else
       (let [[new-buf new-kr] (case command
                                :forward-char [(core/forward-char buf) kill-ring]

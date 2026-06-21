@@ -1,5 +1,6 @@
 (ns ecro.state
   (:require
+    [clojure.string :as str]
     [ecro.buffer :as buffer]
     [ecro.kill-ring :as kr]))
 
@@ -65,3 +66,16 @@
   "Return list of all buffer names."
   [state]
   (map :name (:buffers state)))
+
+
+(defn list-buffers
+  "Create or update a *Buffer List* buffer with all buffer names
+   except the *Buffer List* buffer itself."
+  [state]
+  (let [names (remove #{"*Buffer List*"} (get-buffer-names state))
+        content (str/join "\n" names)
+        buf (or (first (filter #(= (:name %) "*Buffer List*") (:buffers state)))
+                (buffer/make-buffer "*Buffer List*"))
+        updated (assoc buf :text content :point 0)]
+    (-> (assoc-current-buffer state updated)
+        (assoc :message (str (count names) " buffers")))))
