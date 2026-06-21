@@ -2,15 +2,6 @@
 
 ## Next
 
-### Mode detection
-
-- [x] Detect major mode from file extension / buffer name
-- [ ] Add basic `fundamental-mode`
-- [ ] Add basic `text-mode`
-- [x] Add major mode support on buffers
-- [ ] Add minor mode toggle support
-- [ ] Add mode-specific keymap resolution
-
 ### mise project tooling detection
 
 - [ ] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
@@ -54,7 +45,10 @@
 ## Completed
 
 - [x] Detect major mode from file extension / buffer name
+- [x] Add basic `fundamental-mode` and `text-mode` registry
 - [x] Add major mode support on buffers
+- [x] Add minor mode toggle support
+- [x] Add mode-specific keymap resolution
 - [x] Review `src/ecro/buffer.clj` responsibilities and identify one extraction target
 - [x] Extract undo/redo operation logic from `buffer.clj` into `ecro.undo`
 - [x] Extract text insertion/deletion helpers from `buffer.clj` (no further extraction needed)
