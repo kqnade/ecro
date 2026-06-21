@@ -82,3 +82,62 @@
   [mise-path]
   (when (and mise-path (.exists (io/file mise-path)))
     (parse-tools (slurp mise-path))))
+
+
+(def ^:private mise-detection-cache
+  "Cache of project tool detection results keyed by project root path."
+  (atom {}))
+
+
+(defn clear-cache!
+  "Clear the global mise detection cache."
+  []
+  (reset! mise-detection-cache {}))
+
+
+(defn cache-result
+  "Cache a detection result for the given project root."
+  [root result]
+  (swap! mise-detection-cache assoc root result))
+
+
+(defn cached-result
+  "Return a cached detection result for the given project root, or nil."
+  [root]
+  (get @mise-detection-cache root))
+
+
+(defn detect-project-tools
+  "Detect project tools for a file path. Returns a map with:
+   :mise-path, :tools, :analyzer-candidates, :lsp-candidates."
+  [filepath home-dir]
+  (if-let [mise-path (find-mise-toml filepath home-dir)]
+    {:mise-path mise-path
+     :tools (normalize-tools (load-tools mise-path))
+     :analyzer-candidates []
+     :lsp-candidates []}
+    {:mise-path nil
+     :tools #{}
+     :analyzer-candidates []
+     :lsp-candidates []}))
+
+
+(defn project-root
+  "Infer a project root for caching. Prefers the directory containing
+   mise.toml, falling back to the git root or the file's directory."
+  [filepath home-dir]
+  (or (when-let [mise-path (find-mise-toml filepath home-dir)]
+        (.getParent (io/file mise-path)))
+      (git-root (.getParentFile (io/file filepath)))
+      (.getParent (io/file filepath))))
+
+
+(defn detect-project-tools-cached
+  "Detect project tools, using and updating the global cache."
+  [filepath home-dir]
+  (let [root (project-root filepath home-dir)]
+    (if-let [cached (cached-result root)]
+      cached
+      (let [result (detect-project-tools filepath home-dir)]
+        (cache-result root result)
+        result))))

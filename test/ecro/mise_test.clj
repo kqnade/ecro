@@ -27,6 +27,56 @@
     (is (= #{} (mise/normalize-tools [])))))
 
 
+(deftest test-detect-project-tools
+  (testing "detects tools when mise.toml exists"
+    (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_detect_" (System/currentTimeMillis)))
+          home (io/file tmp "home")
+          project (io/file home "project")]
+      (.mkdirs project)
+      (spit (io/file project "mise.toml") "[tools]\nnode = \"20\"\nrust = \"1.70\"\n")
+      (let [result (mise/detect-project-tools (io/file project "src" "foo.clj") home)]
+        (is (= (.getAbsolutePath (io/file project "mise.toml")) (:mise-path result)))
+        (is (= #{:node :rust} (:tools result)))
+        (is (vector? (:analyzer-candidates result)))
+        (is (vector? (:lsp-candidates result))))
+      (.delete (io/file project "mise.toml"))
+      (.delete project)
+      (.delete home)
+      (.delete tmp))
+    (testing "returns empty result when mise.toml is missing"
+      (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_detect_" (System/currentTimeMillis)))
+            home (io/file tmp "home")
+            project (io/file home "project")]
+        (.mkdirs project)
+        (let [result (mise/detect-project-tools (io/file project "foo.clj") home)]
+          (is (nil? (:mise-path result)))
+          (is (= #{} (:tools result)))
+          (is (vector? (:analyzer-candidates result)))
+          (is (vector? (:lsp-candidates result))))
+        (.delete project)
+        (.delete home)
+        (.delete tmp)))))
+
+
+(deftest test-cache
+  (testing "cached result is returned on second call"
+    (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_cache_" (System/currentTimeMillis)))
+          home (io/file tmp "home")
+          project (io/file home "project")]
+      (.mkdirs project)
+      (spit (io/file project "mise.toml") "[tools]\nnode = \"20\"\n")
+      (mise/clear-cache!)
+      (let [first-result (mise/detect-project-tools-cached (io/file project "src" "foo.clj") home)
+            second-result (mise/detect-project-tools-cached (io/file project "src" "bar.clj") home)]
+        (is (= first-result second-result))
+        (is (= #{:node} (:tools second-result))))
+      (.delete (io/file project "mise.toml"))
+      (.delete project)
+      (.delete home)
+      (.delete tmp)
+      (mise/clear-cache!))))
+
+
 (deftest test-parse-tools
   (testing "parses simple tool declarations"
     (is (= ["node" "rust"] (mise/parse-tools "[tools]\nnode = \"20\"\nrust = \"1.70\""))))
