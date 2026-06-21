@@ -4,10 +4,10 @@
 
 ### Mode detection
 
-- [ ] Detect major mode from file extension / buffer name
+- [x] Detect major mode from file extension / buffer name
 - [ ] Add basic `fundamental-mode`
 - [ ] Add basic `text-mode`
-- [ ] Add major mode support on buffers
+- [x] Add major mode support on buffers
 - [ ] Add minor mode toggle support
 - [ ] Add mode-specific keymap resolution
 
@@ -53,6 +53,8 @@
 
 ## Completed
 
+- [x] Detect major mode from file extension / buffer name
+- [x] Add major mode support on buffers
 - [x] Review `src/ecro/buffer.clj` responsibilities and identify one extraction target
 - [x] Extract undo/redo operation logic from `buffer.clj` into `ecro.undo`
 - [x] Extract text insertion/deletion helpers from `buffer.clj` (no further extraction needed)
