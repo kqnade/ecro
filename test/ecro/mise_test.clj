@@ -5,6 +5,37 @@
     [ecro.mise :as mise]))
 
 
+(deftest test-parse-tools
+  (testing "parses simple tool declarations"
+    (is (= ["node" "rust"] (mise/parse-tools "[tools]\nnode = \"20\"\nrust = \"1.70\""))))
+  (testing "parses quoted tool names"
+    (is (= ["ubi:BurntSushi/ripgrep"] (mise/parse-tools "[tools]\n\"ubi:BurntSushi/ripgrep\" = \"latest\""))))
+  (testing "parses table-form tool declarations"
+    (is (= ["java"] (mise/parse-tools "[tools]\njava = { version = \"21\" }"))))
+  (testing "ignores comments and blank lines"
+    (is (= ["node"] (mise/parse-tools "[tools]\n# comment\nnode = \"20\"\n\n"))))
+  (testing "stops at next section"
+    (let [content "[tools]\nnode = \"20\"\n\n[env]\nFOO = \"bar\""]
+      (is (= ["node"] (mise/parse-tools content)))))
+  (testing "returns nil when there is no tools section"
+    (is (nil? (mise/parse-tools "[env]\nFOO = \"bar\""))))
+  (testing "returns empty vector for empty tools section"
+    (is (= [] (mise/parse-tools "[tools]\n")))))
+
+
+(deftest test-load-tools
+  (testing "loads tools from a mise.toml file"
+    (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_parse_" (System/currentTimeMillis)))]
+      (.mkdirs tmp)
+      (let [mise-path (io/file tmp "mise.toml")]
+        (spit mise-path "[tools]\nnode = \"20\"\nrust = \"1.70\"\n")
+        (is (= ["node" "rust"] (mise/load-tools (.getAbsolutePath mise-path))))
+        (.delete mise-path)
+        (.delete tmp))))
+  (testing "returns nil for missing file"
+    (is (nil? (mise/load-tools "/tmp/nonexistent_mise_file.toml")))))
+
+
 (deftest test-find-mise-toml
   (testing "finds mise.toml in the same directory as the file"
     (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_test_" (System/currentTimeMillis)))

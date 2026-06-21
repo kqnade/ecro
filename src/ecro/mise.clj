@@ -1,6 +1,7 @@
 (ns ecro.mise
   (:require
-    [clojure.java.io :as io]))
+    [clojure.java.io :as io]
+    [clojure.string :as str]))
 
 
 (defn- git-root
@@ -34,3 +35,29 @@
             (.exists mise) (.getAbsolutePath mise)
             (contains? stop-paths dir-path) nil
             :else (recur (.getParentFile dir))))))))
+
+
+(defn- extract-tools-section
+  "Extract the raw content of the [tools] section from TOML text."
+  [content]
+  (when content
+    (second (re-find #"(?s)\[tools\]\s*(.*?)(?:\n\[|\z)" content))))
+
+
+(defn parse-tools
+  "Parse tool names from a mise.toml [tools] section.
+   Returns a sequence of tool name strings."
+  [content]
+  (when-let [section (extract-tools-section content)]
+    (->> (str/split-lines section)
+         (map #(re-find #"^\s*\"?([^\"=#\s]+)\"?\s*=" %))
+         (keep #(some-> % second str/trim))
+         vec)))
+
+
+(defn load-tools
+  "Load and parse the [tools] section from a mise.toml file.
+   Returns a vector of tool name strings, or nil if the file is missing."
+  [mise-path]
+  (when (and mise-path (.exists (io/file mise-path)))
+    (parse-tools (slurp mise-path))))
