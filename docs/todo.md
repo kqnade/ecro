@@ -2,15 +2,54 @@
 
 ## Next
 
-- [ ] Parse `mise.toml` `[tools]` for project tooling detection
-- [ ] Normalize mise tool names into a keyword set
-- [ ] Infer analyzer / LSP candidates from detected mise tools
-- [ ] Return an empty mise detection result when `mise.toml` is missing
-- [ ] Keep mise tooling separate from ecro editor config
+### Mode detection
+
+- [ ] Detect major mode from file extension / buffer name
+- [ ] Add basic `fundamental-mode`
+- [ ] Add basic `text-mode`
 - [ ] Add major mode support on buffers
 - [ ] Add minor mode toggle support
 - [ ] Add mode-specific keymap resolution
-- [ ] Add basic `fundamental-mode` and `text-mode`
+
+### mise project tooling detection
+
+- [ ] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
+- [ ] Parse `mise.toml` `[tools]` for project tooling detection
+- [ ] Normalize mise tool names into a keyword set
+- [ ] Cache mise detection result globally
+- [ ] Infer analyzer / LSP candidates from detected mise tools
+- [ ] Return an empty mise detection result when `mise.toml` is missing
+- [ ] Keep mise tooling separate from ecro editor config
+
+## Medium
+
+- [ ] Implement `M-f` `forward-word`
+- [ ] Implement `M-b` `backward-word`
+- [ ] Implement `M-,` `beginning-of-buffer`
+- [ ] Implement `M-.` `end-of-buffer`
+- [ ] Implement `C-v` `scroll-up-command`
+- [ ] Implement `M-v` `scroll-down-command`
+- [ ] Implement `M-y` `yank-pop`
+- [ ] Implement `ESC b` `switch-to-buffer`
+- [ ] Implement `ESC k` `kill-buffer`
+- [ ] Implement `ESC B` `list-buffers`
+- [ ] Implement `ESC 0` `delete-window`
+- [ ] Implement `ESC 1` `delete-other-windows`
+- [ ] Implement `ESC o` `other-window`
+- [ ] Implement `ESC w` `write-file`
+- [ ] Implement `C-SPC` `set-mark-command`
+- [ ] Implement region highlight / region-based commands
+
+## Low
+
+- [ ] Implement `ESC %` `query-replace`
+- [ ] Implement `C-l` `recenter-top-bottom`
+- [ ] Add face model for syntax highlight
+- [ ] Integrate tree-sitter syntax adapter in Rust
+- [ ] Implement indentation rules and `TAB` indent
+- [ ] Implement bracket matching
+- [ ] Implement auto-indent on newline
+- [ ] Integrate SKK Japanese input mode
 
 ## Completed
 
