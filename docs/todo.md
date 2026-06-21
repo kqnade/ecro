@@ -6,11 +6,11 @@
 
 - [x] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
 - [x] Parse `mise.toml` `[tools]` for project tooling detection
-- [ ] Normalize mise tool names into a keyword set
-- [ ] Cache mise detection result globally
-- [ ] Infer analyzer / LSP candidates from detected mise tools
-- [ ] Return an empty mise detection result when `mise.toml` is missing
-- [ ] Keep mise tooling separate from ecro editor config
+- [x] Normalize mise tool names into a keyword set
+- [x] Cache mise detection result globally
+- [x] Infer analyzer / LSP candidates from detected mise tools
+- [x] Return an empty mise detection result when `mise.toml` is missing
+- [x] Keep mise tooling separate from ecro editor config
 - [ ] Optionally inspect mise install cache as a fallback tooling signal
 
 ## Medium
@@ -45,6 +45,13 @@
 
 ## Completed
 
+- [x] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
+- [x] Parse `mise.toml` `[tools]` for project tooling detection
+- [x] Normalize mise tool names into a keyword set
+- [x] Cache mise detection result globally
+- [x] Infer analyzer / LSP candidates from detected mise tools
+- [x] Return an empty mise detection result when `mise.toml` is missing
+- [x] Keep mise tooling separate from ecro editor config
 - [x] Detect major mode from file extension / buffer name
 - [x] Add basic `fundamental-mode` and `text-mode` registry
 - [x] Add major mode support on buffers
