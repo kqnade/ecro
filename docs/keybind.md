@@ -45,7 +45,7 @@ LeadKey + キー でコマンド実行：
 ### レイヤー2（編集/ナビゲーション）- LT2(TAB) 長押しで発動
 
 ```
-左上:  ESC       F1        F2        F3        F4        F5        F5
+左上:  ESC       F1        F2        F3        F4        F5        F6
 左中:  SPACE     C-a       C-z       END       HOME      DELETE    LANG2
 左下:  LCTRL     C-S-z     C-x       C-c       C-v       INSERT    -
 左親:  -         -         -         TRNS      TRNS      SPACE     -
@@ -105,10 +105,10 @@ LeadKey + キー でコマンド実行：
 | `END` | `move-end-of-line` | ✅ |
 | `C-a` | `move-beginning-of-line` | ✅ |
 | `C-e` | `move-end-of-line` | ✅ |
-| `M-f` | `forward-word` | ❌ |
-| `M-b` | `backward-word` | ❌ |
-| `M-,` | `beginning-of-buffer` 候補 | ❌ |
-| `M-.` | `end-of-buffer` 候補 | ❌ |
+| `M-f` | `forward-word` | ✅ |
+| `M-b` | `backward-word` | ✅ |
+| `M-,` | `beginning-of-buffer` 候補 | ✅ |
+| `M-.` | `end-of-buffer` 候補 | ✅ |
 
 ### スクロール系
 
@@ -116,8 +116,7 @@ LeadKey + キー でコマンド実行：
 |------|---------|------|
 | `PGDN` | 画面ダウンスクロール | ✅ |
 | `PGUP` | 画面アップスクロール | ✅ |
-| `C-v` | `scroll-up-command` (1画面下へ) | ❌ |
-| `M-v` | `scroll-down-command` (1画面上へ) | ❌ |
+| `M-v` | `scroll-down-command` (1画面上へ) | ✅ |
 
 ### 編集系
 
@@ -132,7 +131,7 @@ LeadKey + キー でコマンド実行：
 | `C-x` | `kill-region` (カット) | ✅ |
 | `C-c` | `kill-ring-save` (コピー) | ✅ |
 | `C-v` | `yank` (ペースト) | ✅ |
-| `M-y` | `yank-pop` (cycle kill-ring) | ❌ |
+| `M-y` | `yank-pop` (cycle kill-ring) | ✅ |
 
 ### Undo/Redo
 
@@ -152,25 +151,25 @@ LeadKey + キー でコマンド実行：
 |------|---------|------|
 | `ESC f` | `find-file` | ✅ |
 | `ESC s` | `save-buffer` | ✅ |
-| `ESC w` | `write-file` (別名で保存) | ❌ |
+| `ESC w` | `write-file` (別名で保存) | ✅ |
 
 ### バッファー操作
 
 | キー | コマンド | 実装 |
 |------|---------|------|
-| `ESC b` | `switch-to-buffer` | ❌ |
-| `ESC k` | `kill-buffer` | ❌ |
-| `ESC B` | `list-buffers` | ❌ |
+| `ESC b` | `switch-to-buffer` | ✅ |
+| `ESC k` | `kill-buffer` | ✅ |
+| `ESC B` | `list-buffers` | ✅ |
 
 ### ウィンドウ操作
 
 | キー | コマンド | 実装 |
 |------|---------|------|
-| `ESC 0` | `delete-window` | ❌ |
-| `ESC 1` | `delete-other-windows` | ❌ |
+| `ESC 0` | `delete-window` | ✅ |
+| `ESC 1` | `delete-other-windows` | ✅ |
 | `ESC 2` | `split-window-below` | ✅（基礎） |
 | `ESC 3` | `split-window-right` | ✅（基礎） |
-| `ESC o` | `other-window` | ❌ |
+| `ESC o` | `other-window` | ✅ |
 
 ### 検索 / 置換
 
@@ -184,7 +183,7 @@ LeadKey + キー でコマンド実行：
 
 | キー | コマンド | 実装 |
 |------|---------|------|
-| `C-SPC` | `set-mark-command` | ❌ |
+| `C-SPC` | `set-mark-command` | ✅ |
 | `ESC h` | `mark-whole-buffer` | ❌ |
 
 ### モード

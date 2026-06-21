@@ -15,22 +15,22 @@
 
 ## Medium
 
-- [ ] Implement `M-f` `forward-word`
-- [ ] Implement `M-b` `backward-word`
-- [ ] Implement `M-,` `beginning-of-buffer`
-- [ ] Implement `M-.` `end-of-buffer`
-- [ ] Implement `C-v` `scroll-up-command`
-- [ ] Implement `M-v` `scroll-down-command`
-- [ ] Implement `M-y` `yank-pop`
-- [ ] Implement `ESC b` `switch-to-buffer`
-- [ ] Implement `ESC k` `kill-buffer`
-- [ ] Implement `ESC B` `list-buffers`
-- [ ] Implement `ESC 0` `delete-window`
-- [ ] Implement `ESC 1` `delete-other-windows`
-- [ ] Implement `ESC o` `other-window`
-- [ ] Implement `ESC w` `write-file`
-- [ ] Implement `C-SPC` `set-mark-command`
-- [ ] Implement region highlight / region-based commands
+- [x] Implement `M-f` `forward-word`
+- [x] Implement `M-b` `backward-word`
+- [x] Implement `M-,` `beginning-of-buffer`
+- [x] Implement `M-.` `end-of-buffer`
+- [x] Implement `C-v` `scroll-up-command`
+- [x] Implement `M-v` `scroll-down-command`
+- [x] Implement `M-y` `yank-pop`
+- [x] Implement `ESC b` `switch-to-buffer`
+- [x] Implement `ESC k` `kill-buffer`
+- [x] Implement `ESC B` `list-buffers`
+- [x] Implement `ESC 0` `delete-window`
+- [x] Implement `ESC 1` `delete-other-windows`
+- [x] Implement `ESC o` `other-window`
+- [x] Implement `ESC w` `write-file`
+- [x] Implement `C-SPC` `set-mark-command`
+- [x] Implement region highlight / region-based commands
 
 ## Low
 
@@ -45,6 +45,22 @@
 
 ## Completed
 
+- [x] Implement `M-f` `forward-word`
+- [x] Implement `M-b` `backward-word`
+- [x] Implement `M-,` `beginning-of-buffer`
+- [x] Implement `M-.` `end-of-buffer`
+- [x] Implement `C-v` `scroll-up-command`
+- [x] Implement `M-v` `scroll-down-command`
+- [x] Implement `M-y` `yank-pop`
+- [x] Implement `ESC b` `switch-to-buffer`
+- [x] Implement `ESC k` `kill-buffer`
+- [x] Implement `ESC B` `list-buffers`
+- [x] Implement `ESC 0` `delete-window`
+- [x] Implement `ESC 1` `delete-other-windows`
+- [x] Implement `ESC o` `other-window`
+- [x] Implement `ESC w` `write-file`
+- [x] Implement `C-SPC` `set-mark-command`
+- [x] Implement region highlight / region-based commands
 - [x] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
 - [x] Parse `mise.toml` `[tools]` for project tooling detection
 - [x] Normalize mise tool names into a keyword set
