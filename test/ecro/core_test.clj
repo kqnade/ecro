@@ -23,6 +23,25 @@
       (is (= 11 (:point buf))))))
 
 
+(deftest test-set-mark-command
+  (testing "C-SPC sets the mark at current point"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello world")
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (core/set-mark-command))]
+      (is (= 6 (:mark buf)))))
+  (testing "second C-SPC deactivates the mark"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello")
+                  (core/set-mark-command)
+                  (core/set-mark-command))]
+      (is (nil? (:mark buf))))))
+
+
 (deftest test-jna-available
   (testing "JNA is available on classpath"
     (is (try

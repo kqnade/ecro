@@ -66,6 +66,12 @@
                                :previous-line [(core/previous-line buf) kill-ring]
                                :move-beginning-of-line [(core/move-beginning-of-line buf) kill-ring]
                                :move-end-of-line [(core/move-end-of-line buf) kill-ring]
+                               :forward-word [(core/forward-word buf) kill-ring]
+                               :backward-word [(core/backward-word buf) kill-ring]
+                               :beginning-of-buffer [(core/beginning-of-buffer buf) kill-ring]
+                               :end-of-buffer [(core/end-of-buffer buf) kill-ring]
+                               :set-mark-command [(core/set-mark-command buf) kill-ring]
+                               :scroll-down-command [(scroll/scroll-down-command buf (dec (:height (or (:frame editor-state) {:height 24})))) kill-ring]
                                :kill-line (let [[new-buf killed] (kr/kill-line buf)]
                                             [new-buf (kr/kill-text kill-ring killed)])
                                :undo [(undo/undo buf) kill-ring]
