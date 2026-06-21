@@ -131,3 +131,15 @@
         p1 (skip-while-back text (dec point) #(not (word-char? %)))
         p2 (skip-while-back text p1 word-char?)]
     (assoc buf :point (max 0 (inc p2)))))
+
+
+(defn beginning-of-buffer
+  "Move point to the beginning of the buffer (M-<)."
+  [buf]
+  (assoc buf :point 0))
+
+
+(defn end-of-buffer
+  "Move point to the end of the buffer (M->)."
+  [buf]
+  (assoc buf :point (count (:text buf))))

@@ -5,6 +5,24 @@
     [ecro.core :as core]))
 
 
+(deftest test-beginning-of-buffer
+  (testing "M-< moves point to start of buffer"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello world")
+                  (b/move-point-backward)
+                  (core/beginning-of-buffer))]
+      (is (= 0 (:point buf))))))
+
+
+(deftest test-end-of-buffer
+  (testing "M-> moves point to end of buffer"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello world")
+                  (b/move-point-backward)
+                  (core/end-of-buffer))]
+      (is (= 11 (:point buf))))))
+
+
 (deftest test-jna-available
   (testing "JNA is available on classpath"
     (is (try
