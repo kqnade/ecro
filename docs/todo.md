@@ -2,35 +2,7 @@
 
 ## Next
 
-### mise project tooling detection
-
-- [x] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
-- [x] Parse `mise.toml` `[tools]` for project tooling detection
-- [x] Normalize mise tool names into a keyword set
-- [x] Cache mise detection result globally
-- [x] Infer analyzer / LSP candidates from detected mise tools
-- [x] Return an empty mise detection result when `mise.toml` is missing
-- [x] Keep mise tooling separate from ecro editor config
 - [ ] Optionally inspect mise install cache as a fallback tooling signal
-
-## Medium
-
-- [x] Implement `M-f` `forward-word`
-- [x] Implement `M-b` `backward-word`
-- [x] Implement `M-,` `beginning-of-buffer`
-- [x] Implement `M-.` `end-of-buffer`
-- [x] Implement `C-v` `scroll-up-command`
-- [x] Implement `M-v` `scroll-down-command`
-- [x] Implement `M-y` `yank-pop`
-- [x] Implement `ESC b` `switch-to-buffer`
-- [x] Implement `ESC k` `kill-buffer`
-- [x] Implement `ESC B` `list-buffers`
-- [x] Implement `ESC 0` `delete-window`
-- [x] Implement `ESC 1` `delete-other-windows`
-- [x] Implement `ESC o` `other-window`
-- [x] Implement `ESC w` `write-file`
-- [x] Implement `C-SPC` `set-mark-command`
-- [x] Implement region highlight / region-based commands
 
 ## Low
 

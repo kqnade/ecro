@@ -93,8 +93,18 @@
           after (subs line rel-end)
           rendered (str before "\033[7m" inside "\033[0m" after)
           expanded (expand-tabs rendered tab-width)]
-      (subs (format (str "%" width "s") expanded) 0 width))
+      (subs (format (str "%-" width "s") expanded) 0 width))
     (screen-line line width tab-width)))
+
+
+(defn- rendered-visible-lines
+  "Render visible buffer lines exactly as they should be stored in screen-buffer."
+  [lines visible-lines scroll-line region width tab-width]
+  (mapv (fn [idx line]
+          (let [line-start (line-start-offset lines scroll-line idx)]
+            (render-line-with-region line line-start region width tab-width)))
+        (range)
+        visible-lines))
 
 
 (defn render
@@ -107,13 +117,12 @@
         lines (str/split (or (:text buf) "") #"\n" -1)
         visible-lines (take (- height 1) (drop scroll-line lines))
         region (region-range buf)
+        rendered-lines (rendered-visible-lines lines visible-lines scroll-line region width tab-width)
         old-screen @screen-buffer]
     (print "\033[?25l")
-    (doseq [[idx line] (map-indexed vector visible-lines)]
-      (let [line-start (line-start-offset lines scroll-line idx)
-            rendered (render-line-with-region line line-start region width tab-width)]
-        (when (not= (get old-screen idx) rendered)
-          (print (str "\033[" (inc idx) ";1H" rendered)))))
+    (doseq [[idx rendered] (map-indexed vector rendered-lines)]
+      (when (not= (get old-screen idx) rendered)
+        (print (str "\033[" (inc idx) ";1H" rendered))))
     (doseq [idx (range (count visible-lines) (- height 1))]
       (update-screen-line idx (get old-screen idx) "" width))
     (let [status (status-line state)
@@ -133,4 +142,4 @@
           screen-row (- line-num scroll-line)]
       (print (str "\033[" (inc (max 0 screen-row)) ";" (inc visual-col) "H\033[?25h")))
     (flush)
-    (reset! screen-buffer (mapv #(screen-line % width tab-width) visible-lines))))
+    (reset! screen-buffer rendered-lines)))
