@@ -108,6 +108,28 @@
       (last wins))))
 
 
+(defn delete-window
+  "Remove a window from the frame tree. Returns updated frame."
+  [frame window]
+  (let [root (:root-window frame)
+        new-root (wt/remove-window root window)]
+    (if new-root
+      (make-frame (update-window-positions new-root 0 0) (:width frame) (:height frame))
+      (make-frame window (:width frame) (:height frame)))))
+
+
+(defn delete-other-windows
+  "Keep only the given window in the frame. Returns updated frame."
+  [frame window]
+  (make-frame (assoc window :parent nil :width (:width frame) :height (:height frame)) (:width frame) (:height frame)))
+
+
+(defn other-window
+  "Return the next window in the frame cycle."
+  [frame window]
+  (next-window frame window))
+
+
 (defn resize-frame
   "Resize a frame and its root window."
   [frame width height]

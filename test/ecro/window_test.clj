@@ -83,6 +83,40 @@
       (is (= "buffer2" (:name (:buffer win2)))))))
 
 
+(deftest test-delete-window
+  (testing "delete-window removes the given window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          wins (w/get-windows split-frame)
+          deleted (w/delete-window split-frame (first wins))]
+      (is (= 1 (count (w/get-windows deleted)))))))
+
+
+(deftest test-delete-other-windows
+  (testing "delete-other-windows keeps only the given window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          wins (w/get-windows split-frame)
+          kept (w/delete-other-windows split-frame (second wins))]
+      (is (= 1 (count (w/get-windows kept))))
+      (is (= "*new*" (-> kept :root-window :buffer :name)))
+      (is (= 80 (-> kept :root-window :width)))
+      (is (= 24 (-> kept :root-window :height)))
+      (is (nil? (-> kept :root-window :parent))))))
+
+
+(deftest test-other-window
+  (testing "other-window cycles to the next window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          wins (w/get-windows split-frame)]
+      (is (= (second wins) (w/other-window split-frame (first wins))))
+      (is (= (first wins) (w/other-window split-frame (second wins)))))))
+
+
 (deftest test-frame-resize
   (testing "resizing frame updates root window"
     (let [buf (b/make-buffer "test")
