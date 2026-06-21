@@ -107,19 +107,40 @@
   (get @mise-detection-cache root))
 
 
+(def tool->candidates
+  "Map of normalized tool keywords to candidate analyzer / LSP keywords."
+  {:clojure {:analyzers [:clj-kondo] :lsps [:clojure-lsp]}
+   :clojure-cli {:analyzers [:clj-kondo] :lsps [:clojure-lsp]}
+   :rust {:analyzers [:rust-analyzer] :lsps [:rust-analyzer]}
+   :node {:analyzers [:eslint] :lsps [:typescript-language-server]}
+   :java {:analyzers [] :lsps [:jdtls]}
+   :python {:analyzers [:ruff] :lsps [:pyright :pylsp]}})
+
+
+(defn infer-candidates
+  "Infer analyzer and LSP candidates from a set of normalized tool keywords.
+   Returns a map with :analyzers and :lsps vectors."
+  [tools]
+  (let [candidates (keep tool->candidates tools)]
+    {:analyzers (vec (distinct (mapcat :analyzers candidates)))
+     :lsps (vec (distinct (mapcat :lsps candidates)))}))
+
+
 (defn detect-project-tools
   "Detect project tools for a file path. Returns a map with:
-   :mise-path, :tools, :analyzer-candidates, :lsp-candidates."
+   :mise-path, :tools, :analyzers, :lsps."
   [filepath home-dir]
   (if-let [mise-path (find-mise-toml filepath home-dir)]
-    {:mise-path mise-path
-     :tools (normalize-tools (load-tools mise-path))
-     :analyzer-candidates []
-     :lsp-candidates []}
+    (let [tools (normalize-tools (load-tools mise-path))
+          candidates (infer-candidates tools)]
+      {:mise-path mise-path
+       :tools tools
+       :analyzers (:analyzers candidates)
+       :lsps (:lsps candidates)})
     {:mise-path nil
      :tools #{}
-     :analyzer-candidates []
-     :lsp-candidates []}))
+     :analyzers []
+     :lsps []}))
 
 
 (defn project-root

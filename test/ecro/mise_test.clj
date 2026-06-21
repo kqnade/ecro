@@ -37,8 +37,8 @@
       (let [result (mise/detect-project-tools (io/file project "src" "foo.clj") home)]
         (is (= (.getAbsolutePath (io/file project "mise.toml")) (:mise-path result)))
         (is (= #{:node :rust} (:tools result)))
-        (is (vector? (:analyzer-candidates result)))
-        (is (vector? (:lsp-candidates result))))
+        (is (vector? (:analyzers result)))
+        (is (vector? (:lsps result))))
       (.delete (io/file project "mise.toml"))
       (.delete project)
       (.delete home)
@@ -51,8 +51,8 @@
         (let [result (mise/detect-project-tools (io/file project "foo.clj") home)]
           (is (nil? (:mise-path result)))
           (is (= #{} (:tools result)))
-          (is (vector? (:analyzer-candidates result)))
-          (is (vector? (:lsp-candidates result))))
+          (is (vector? (:analyzers result)))
+          (is (vector? (:lsps result))))
         (.delete project)
         (.delete home)
         (.delete tmp)))))
@@ -75,6 +75,21 @@
       (.delete home)
       (.delete tmp)
       (mise/clear-cache!))))
+
+
+(deftest test-infer-candidates
+  (testing "infers candidates from known tools"
+    (is (= {:analyzers [:clj-kondo] :lsps [:clojure-lsp]}
+           (mise/infer-candidates #{:clojure}))))
+  (testing "merges candidates from multiple tools without duplicates"
+    (is (= {:analyzers [:clj-kondo] :lsps [:clojure-lsp]}
+           (mise/infer-candidates #{:clojure :clojure-cli}))))
+  (testing "returns empty candidates for unknown tools"
+    (is (= {:analyzers [] :lsps []}
+           (mise/infer-candidates #{:unknown-tool}))))
+  (testing "infers rust-analyzer for rust"
+    (is (= {:analyzers [:rust-analyzer] :lsps [:rust-analyzer]}
+           (mise/infer-candidates #{:rust})))))
 
 
 (deftest test-parse-tools
