@@ -15,6 +15,18 @@
   (update buf :scroll-line (fn [s] (max 0 (- s n)))))
 
 
+(defn scroll-up-command
+  "Scroll forward by one screen, showing the next page (C-v)."
+  [buf window-height]
+  (scroll-down buf window-height))
+
+
+(defn scroll-down-command
+  "Scroll backward by one screen, showing the previous page (M-v)."
+  [buf window-height]
+  (scroll-up buf window-height))
+
+
 (defn adjust-scroll-for-point
   "Adjust scroll position to keep cursor visible."
   [buf height]

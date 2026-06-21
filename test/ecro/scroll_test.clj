@@ -29,6 +29,27 @@
       (is (= 0 (:scroll-line buf))))))
 
 
+(deftest test-scroll-up-command
+  (testing "C-v scrolls down by window height"
+    (let [buf (-> (b/make-buffer "test")
+                  (assoc :scroll-line 0)
+                  (scroll/scroll-up-command 5))]
+      (is (= 5 (:scroll-line buf))))))
+
+
+(deftest test-scroll-down-command
+  (testing "M-v scrolls up by window height"
+    (let [buf (-> (b/make-buffer "test")
+                  (assoc :scroll-line 10)
+                  (scroll/scroll-down-command 5))]
+      (is (= 5 (:scroll-line buf)))))
+  (testing "M-v stops at top of buffer"
+    (let [buf (-> (b/make-buffer "test")
+                  (assoc :scroll-line 2)
+                  (scroll/scroll-down-command 5))]
+      (is (= 0 (:scroll-line buf))))))
+
+
 (deftest test-scroll-to-point
   (testing "scroll to keep point visible"
     (let [buf (-> (b/make-buffer "test")
