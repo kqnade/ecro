@@ -106,3 +106,47 @@
                   (b/move-point-backward)
                   (core/kill-line))]
       (is (= "ab" (:text buf))))))
+
+
+(deftest test-forward-word
+  (testing "M-f moves to end of next word"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello world")
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (core/forward-word))]
+      (is (= 11 (:point buf)))))
+  (testing "M-f skips non-word characters before moving to word"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "  hello")
+                  (core/forward-word))]
+      (is (= 7 (:point buf)))))
+  (testing "M-f stops at end of buffer"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hi")
+                  (core/forward-word))]
+      (is (= 2 (:point buf))))))
+
+
+(deftest test-backward-word
+  (testing "M-b moves to beginning of previous word"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello world")
+                  (core/backward-word))]
+      (is (= 6 (:point buf)))))
+  (testing "M-b skips non-word characters"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hello  ")
+                  (core/backward-word))]
+      (is (= 0 (:point buf)))))
+  (testing "M-b stops at beginning of buffer"
+    (let [buf (-> (b/make-buffer "test")
+                  (b/insert-text "hi")
+                  (b/move-point-backward)
+                  (b/move-point-backward)
+                  (core/backward-word))]
+      (is (= 0 (:point buf))))))

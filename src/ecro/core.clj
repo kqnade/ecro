@@ -87,3 +87,47 @@
         col (second line-col)
         line-text (nth lines line-idx)]
     (assoc buf :text (str (subs text 0 point) (subs text (+ point (- (count line-text) col)))))))
+
+
+(defn- word-char?
+  "Return true if ch is a word constituent character."
+  [ch]
+  (boolean (re-matches #"[\w-]" (str ch))))
+
+
+(defn- skip-while
+  "Advance point while pred is true. Returns new point."
+  [text point pred]
+  (loop [p point]
+    (if (and (< p (count text)) (pred (get text p)))
+      (recur (inc p))
+      p)))
+
+
+(defn- skip-while-back
+  "Move point backward while pred is true. Returns new point."
+  [text point pred]
+  (loop [p point]
+    (if (and (>= p 0) (pred (get text p)))
+      (recur (dec p))
+      p)))
+
+
+(defn forward-word
+  "Move point forward to the end of the next word (M-f)."
+  [buf]
+  (let [text (:text buf)
+        point (:point buf)
+        p1 (skip-while text point #(not (word-char? %)))
+        p2 (skip-while text p1 word-char?)]
+    (assoc buf :point p2)))
+
+
+(defn backward-word
+  "Move point backward to the beginning of the previous word (M-b)."
+  [buf]
+  (let [text (:text buf)
+        point (:point buf)
+        p1 (skip-while-back text (dec point) #(not (word-char? %)))
+        p2 (skip-while-back text p1 word-char?)]
+    (assoc buf :point (max 0 (inc p2)))))
