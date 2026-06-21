@@ -75,6 +75,10 @@
                                 (assoc :minibuffer nil))
           :kill-buffer (-> (state/kill-buffer state input)
                            (assoc :minibuffer nil))
+          :write-file (let [buf (:current-buffer state)
+                            new-buf (file/write-file-as buf input)]
+                        (-> (assoc state :minibuffer nil)
+                            (state/assoc-current-buffer new-buf)))
           (assoc state :minibuffer nil)))
 
       (= key-code 27)  ; Escape - cancel

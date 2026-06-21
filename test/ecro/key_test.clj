@@ -1,5 +1,6 @@
 (ns ecro.key-test
   (:require
+    [clojure.java.io :as io]
     [clojure.test :refer :all]
     [ecro.bindings :as bindings]
     [ecro.buffer :as b]
@@ -57,6 +58,23 @@
       (is (nil? (:minibuffer new-state)))
       (is (= 1 (count (:buffers new-state))))
       (is (= "*scratch*" (:name (:current-buffer new-state)))))))
+
+
+(deftest test-minibuffer-write-file
+  (testing "minibuffer Enter writes current buffer to given path"
+    (let [tmp (str (System/getProperty "java.io.tmpdir") "/ecro_write_" (System/currentTimeMillis) ".txt")
+          state {:minibuffer {:buffer {:text tmp}
+                              :command :write-file
+                              :prompt "Write file: "}
+                 :current-buffer {:name "*scratch*" :text "hello" :point 0 :saved-text ""}
+                 :buffers [{:name "*scratch*" :text "hello" :point 0 :saved-text ""}]}]
+      (try
+        (let [new-state (key/handle-key state 13 0)]
+          (is (nil? (:minibuffer new-state)))
+          (is (= "hello" (slurp tmp)))
+          (is (= tmp (:filepath (:current-buffer new-state)))))
+        (finally
+          (io/delete-file tmp true))))))
 
 
 (deftest test-repeated-shift-arrow-keeps-selection-buffer

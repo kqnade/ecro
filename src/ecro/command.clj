@@ -50,6 +50,11 @@
              :minibuffer (ecro.minibuffer/prompt-for "Kill buffer: " :kill-buffer)
              :key-sequence [])
 
+      (= command :write-file)
+      (assoc editor-state
+             :minibuffer (ecro.minibuffer/prompt-for "Write file: " :write-file)
+             :key-sequence [])
+
       (= command :list-buffers)
       (state/list-buffers editor-state)
 

@@ -37,3 +37,13 @@
   "Command: save-buffer (C-x C-s). Write current buffer to file."
   [buf]
   (write-file buf))
+
+
+(defn write-file-as
+  "Write buffer content to a new filepath and update buffer's filepath and name."
+  [buf filepath]
+  (spit filepath (:text buf))
+  (assoc buf
+         :filepath filepath
+         :name (.getName (io/file filepath))
+         :saved-text (:text buf)))

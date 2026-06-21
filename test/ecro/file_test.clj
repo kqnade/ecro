@@ -43,6 +43,23 @@
           (io/delete-file test-file true))))))
 
 
+(deftest test-write-file-as
+  (testing "write-file-as writes to a new path and updates buffer filepath"
+    (let [src-file (str (System/getProperty "java.io.tmpdir") "/ecro_test_src_" (System/currentTimeMillis) ".txt")
+          dst-file (str (System/getProperty "java.io.tmpdir") "/ecro_test_dst_" (System/currentTimeMillis) ".txt")]
+      (try
+        (spit src-file "original content")
+        (let [buf (f/read-file src-file)
+              new-buf (f/write-file-as buf dst-file)]
+          (is (= "original content" (slurp dst-file)))
+          (is (= dst-file (:filepath new-buf)))
+          (is (= (.getName (io/file dst-file)) (:name new-buf)))
+          (is (= "original content" (:saved-text new-buf))))
+        (finally
+          (io/delete-file src-file true)
+          (io/delete-file dst-file true))))))
+
+
 (deftest test-save-buffer-command
   (testing "save-buffer writes buffer to its filepath"
     (let [test-file (str (System/getProperty "java.io.tmpdir") "/ecro_test_" (System/currentTimeMillis) ".txt")]
