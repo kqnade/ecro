@@ -12,7 +12,11 @@
       (is (= "" (:text buf)))
       (is (= 0 (:point buf)))
       (is (= "" (:saved-text buf)))
-      (is (not (b/modified? buf))))))
+      (is (not (b/modified? buf)))))
+  (testing "buffer creation sets mode from name"
+    (is (= :fundamental-mode (:mode (b/make-buffer "*scratch*"))))
+    (is (= :text-mode (:mode (b/make-buffer "log.txt"))))
+    (is (= :clojure-mode (:mode (b/make-buffer "core.clj"))))))
 
 
 (deftest test-insert-char

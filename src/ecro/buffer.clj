@@ -1,5 +1,6 @@
 (ns ecro.buffer
   (:require
+    [ecro.mode :as mode]
     [ecro.undo :as undo]))
 
 
@@ -8,16 +9,17 @@
   ([name]
    (make-buffer name {}))
   ([name opts]
-   {:name name
-    :text ""
-    :point 0
-    :mark nil
-    :scroll-line 0
-    :undo-stack []
-    :redo-stack []
-    :tab-width (get opts :tab-width 2)
-    :indent-tabs-mode (get opts :indent-tabs-mode false)
-    :saved-text ""}))
+   (mode/set-buffer-mode
+     {:name name
+      :text ""
+      :point 0
+      :mark nil
+      :scroll-line 0
+      :undo-stack []
+      :redo-stack []
+      :tab-width (get opts :tab-width 2)
+      :indent-tabs-mode (get opts :indent-tabs-mode false)
+      :saved-text ""})))
 
 
 (defn insert-char

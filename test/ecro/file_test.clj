@@ -12,7 +12,8 @@
         (spit test-file "hello world")
         (let [buf (f/read-file test-file)]
           (is (= "hello world" (:text buf)))
-          (is (= test-file (:filepath buf))))
+          (is (= test-file (:filepath buf)))
+          (is (= :text-mode (:mode buf))))
         (finally
           (io/delete-file test-file true))))))
 
