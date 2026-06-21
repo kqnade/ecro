@@ -69,6 +69,26 @@
              (conj modes mode-kw)))))
 
 
+(defn- with-parent
+  "Return a copy of a keymap with the given parent attached."
+  [km parent]
+  (assoc km :parent parent))
+
+
+(defn buffer-keymap
+  "Build a hierarchical keymap for a buffer. Priority (highest first):
+   minor mode keymaps -> major mode keymap -> global keymap."
+  [buf global-keymap]
+  (let [major-mode (:mode buf :fundamental-mode)
+        major-km (get-in @mode-registry [major-mode :keymap] (keymap/make-keymap))
+        minor-kms (map #(get-in @mode-registry [% :keymap] (keymap/make-keymap))
+                       (:minor-modes buf))]
+    (reduce (fn [parent child]
+              (with-parent child parent))
+            (with-parent major-km global-keymap)
+            minor-kms)))
+
+
 (defn minor-mode-active?
   "Return true if the given minor mode is active on the buffer."
   [buf mode-kw]

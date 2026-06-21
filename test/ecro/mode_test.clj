@@ -1,6 +1,7 @@
 (ns ecro.mode-test
   (:require
     [clojure.test :refer [deftest is testing]]
+    [ecro.keymap :as keymap]
     [ecro.mode :as mode]))
 
 
@@ -49,6 +50,34 @@
       (is (map? (:keymap fundamental)))
       (is (map? (:keymap text)))
       (is (= :fundamental-mode (:parent text))))))
+
+
+(deftest test-buffer-keymap
+  (testing "major mode keymap overrides global keymap"
+    (let [global (keymap/define-key (keymap/make-keymap) ["C-a"] :global-command)]
+      (with-redefs [mode/mode-registry (atom {:text-mode {:keymap (keymap/define-key (keymap/make-keymap) ["C-a"] :text-command)}})]
+        (let [buf {:mode :text-mode}
+              km (mode/buffer-keymap buf global)]
+          (is (= :text-command (keymap/lookup-key km ["C-a"])))))))
+  (testing "global binding is used when not overridden by major mode"
+    (let [global (keymap/define-key (keymap/make-keymap) ["C-b"] :global-command)]
+      (with-redefs [mode/mode-registry (atom {:text-mode {:keymap (keymap/make-keymap)}})]
+        (let [buf {:mode :text-mode}
+              km (mode/buffer-keymap buf global)]
+          (is (= :global-command (keymap/lookup-key km ["C-b"])))))))
+  (testing "minor mode keymap overrides major mode keymap"
+    (let [global (keymap/make-keymap)]
+      (with-redefs [mode/mode-registry (atom {:text-mode {:keymap (keymap/define-key (keymap/make-keymap) ["C-a"] :text-command)}
+                                              :foo-minor-mode {:keymap (keymap/define-key (keymap/make-keymap) ["C-a"] :foo-command)}})]
+        (let [buf {:mode :text-mode :minor-modes #{:foo-minor-mode}}
+              km (mode/buffer-keymap buf global)]
+          (is (= :foo-command (keymap/lookup-key km ["C-a"])))))))
+  (testing "unregistered major mode falls back to global keymap"
+    (let [global (keymap/define-key (keymap/make-keymap) ["C-c"] :global-command)]
+      (with-redefs [mode/mode-registry (atom {})]
+        (let [buf {:mode :unknown-mode}
+              km (mode/buffer-keymap buf global)]
+          (is (= :global-command (keymap/lookup-key km ["C-c"]))))))))
 
 
 (deftest test-minor-mode-toggle
