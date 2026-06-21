@@ -67,6 +67,36 @@
                       (:message state))))))
 
 
+(defn- region-range
+  "Return [start end] of active region, or nil."
+  [buf]
+  (when (:mark buf)
+    [(min (:mark buf) (:point buf))
+     (max (:mark buf) (:point buf))]))
+
+
+(defn- line-start-offset
+  "Calculate the buffer offset at the start of a visible line."
+  [all-lines scroll-line line-idx]
+  (+ (reduce + (map #(inc (count %)) (take scroll-line all-lines)))
+     (reduce + (map #(inc (count %)) (take line-idx (drop scroll-line all-lines))))))
+
+
+(defn- render-line-with-region
+  "Render a single line, highlighting the active region with reverse video."
+  [line line-start region width tab-width]
+  (if (and region (< line-start (second region)) (>= (+ line-start (count line)) (first region)))
+    (let [rel-start (max 0 (- (first region) line-start))
+          rel-end (min (count line) (- (second region) line-start))
+          before (subs line 0 rel-start)
+          inside (subs line rel-start rel-end)
+          after (subs line rel-end)
+          rendered (str before "\033[7m" inside "\033[0m" after)
+          expanded (expand-tabs rendered tab-width)]
+      (subs (format (str "%" width "s") expanded) 0 width))
+    (screen-line line width tab-width)))
+
+
 (defn render
   "Render editor state with diff updates."
   [state]
@@ -76,10 +106,12 @@
         scroll-line (:scroll-line buf 0)
         lines (str/split (or (:text buf) "") #"\n" -1)
         visible-lines (take (- height 1) (drop scroll-line lines))
+        region (region-range buf)
         old-screen @screen-buffer]
     (print "\033[?25l")
     (doseq [[idx line] (map-indexed vector visible-lines)]
-      (let [rendered (screen-line line width tab-width)]
+      (let [line-start (line-start-offset lines scroll-line idx)
+            rendered (render-line-with-region line line-start region width tab-width)]
         (when (not= (get old-screen idx) rendered)
           (print (str "\033[" (inc idx) ";1H" rendered)))))
     (doseq [idx (range (count visible-lines) (- height 1))]

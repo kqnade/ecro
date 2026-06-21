@@ -6,6 +6,7 @@
     [ecro.kill-ring :as kr]
     [ecro.minibuffer :as minibuffer]
     [ecro.notification :as notification]
+    [ecro.scroll :as scroll]
     [ecro.state :as state]
     [ecro.undo :as undo]))
 

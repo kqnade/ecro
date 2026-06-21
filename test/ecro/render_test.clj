@@ -26,6 +26,18 @@
       (is (not (str/includes? line "C-"))))))
 
 
+(deftest test-render-line-with-region
+  (testing "region is highlighted with reverse video escape sequences"
+    (let [line "hello world"
+          rendered (#'render/render-line-with-region line 0 [0 5] 80 2)]
+      (is (str/includes? rendered "\033[7mhello\033[0m"))
+      (is (str/includes? rendered " world"))))
+  (testing "line outside region is rendered normally"
+    (let [line "hello world"
+          rendered (#'render/render-line-with-region line 20 [0 5] 80 2)]
+      (is (not (str/includes? rendered "\033[7m"))))))
+
+
 (deftest test-status-line-truncated-to-width
   (testing "status line is truncated to given width"
     (let [state {:current-buffer (assoc (b/make-buffer "test")
