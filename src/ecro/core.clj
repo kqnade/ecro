@@ -1,6 +1,6 @@
 (ns ecro.core
   (:require
-    [ecro.buffer :as b]))
+    [ecro.buffer :as buffer]))
 
 
 ;; Emacs basic commands
@@ -8,13 +8,13 @@
 (defn forward-char
   "Move point forward one character (C-f)."
   [buf]
-  (b/move-point-forward buf))
+  (buffer/move-point-forward buf))
 
 
 (defn backward-char
   "Move point backward one character (C-b)."
   [buf]
-  (b/move-point-backward buf))
+  (buffer/move-point-backward buf))
 
 
 (defn next-line
@@ -22,7 +22,7 @@
   [buf]
   (let [text (:text buf)
         point (:point buf)
-        current-line-col (b/point-to-line-column buf point)
+        current-line-col (buffer/point-to-line-column buf point)
         current-line (first current-line-col)
         current-col (second current-line-col)
         lines (clojure.string/split text #"\n" -1)
@@ -40,7 +40,7 @@
   [buf]
   (let [text (:text buf)
         point (:point buf)
-        current-line-col (b/point-to-line-column buf point)
+        current-line-col (buffer/point-to-line-column buf point)
         current-line (first current-line-col)
         current-col (second current-line-col)
         lines (clojure.string/split text #"\n" -1)]
@@ -59,7 +59,7 @@
   (let [point (:point buf)
         text (:text buf)
         lines (clojure.string/split text #"\n" -1)
-        line-col (b/point-to-line-column buf point)
+        line-col (buffer/point-to-line-column buf point)
         line-idx (first line-col)]
     (assoc buf :point (reduce + (map inc (take line-idx lines))))))
 
@@ -70,7 +70,7 @@
   (let [point (:point buf)
         text (:text buf)
         lines (clojure.string/split text #"\n" -1)
-        line-col (b/point-to-line-column buf point)
+        line-col (buffer/point-to-line-column buf point)
         line-idx (first line-col)
         line-text (nth lines line-idx)]
     (assoc buf :point (+ (reduce + (map inc (take line-idx lines))) (count line-text)))))
@@ -82,7 +82,7 @@
   (let [point (:point buf)
         text (:text buf)
         lines (clojure.string/split text #"\n" -1)
-        line-col (b/point-to-line-column buf point)
+        line-col (buffer/point-to-line-column buf point)
         line-idx (first line-col)
         col (second line-col)
         line-text (nth lines line-idx)]
@@ -143,3 +143,12 @@
   "Move point to the end of the buffer (M->)."
   [buf]
   (assoc buf :point (count (:text buf))))
+
+
+(defn set-mark-command
+  "Set or deactivate the mark (C-SPC).
+   First call sets the mark; second consecutive call deactivates it."
+  [buf]
+  (if (:mark buf)
+    (buffer/deactivate-mark buf)
+    (buffer/set-mark buf)))

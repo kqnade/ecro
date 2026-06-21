@@ -22,14 +22,15 @@
 (defn key-name
   "Return the keymap name for a terminal key code and modifier bitset."
   [key-code modifiers]
-  (cond
-    (= key-code 31) "C-/"
-
-    (and (= key-code 26) (shifted? modifiers)) "C-S-z"
-
-    (< key-code 32) (str "C-" (char (+ key-code 96)))
-
-    :else (str (char key-code))))
+  (let [alt? (pos? (bit-and modifiers 2))
+        base (cond
+               (= key-code 31) "C-/"
+               (and (= key-code 26) (shifted? modifiers)) "C-S-z"
+               (< key-code 32) (str "C-" (char (+ key-code 96)))
+               :else (str (char key-code)))]
+    (if alt?
+      (str "M-" base)
+      base)))
 
 
 (defn- handle-prefix-result

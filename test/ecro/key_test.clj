@@ -14,6 +14,13 @@
     (is (= "C-/" (key/key-name 31 1)))))
 
 
+(deftest test-key-name-alt
+  (testing "ALT modifier produces M- prefix"
+    (is (= "M-f" (key/key-name 102 2)))
+    (is (= "M-b" (key/key-name 98 2)))
+    (is (= "M-x" (key/key-name 120 2)))))
+
+
 (deftest test-handle-key-esc-prefix
   (testing "ESC starts prefix sequence"
     (let [state {:current-buffer (b/make-buffer "test")
