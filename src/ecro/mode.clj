@@ -1,6 +1,7 @@
 (ns ecro.mode
   (:require
-    [clojure.java.io :as io]))
+    [clojure.java.io :as io]
+    [ecro.keymap :as keymap]))
 
 
 (def extension->mode
@@ -9,6 +10,21 @@
    ".cljs" :clojure-mode
    ".md" :markdown-mode
    ".txt" :text-mode})
+
+
+(def mode-registry
+  "Map of major mode keywords to their definitions."
+  (atom {:fundamental-mode {:name "Fundamental"
+                            :keymap (keymap/make-keymap)}
+         :text-mode {:name "Text"
+                     :keymap (keymap/make-keymap)
+                     :parent :fundamental-mode}}))
+
+
+(defn registered-modes
+  "Return the set of registered major mode keywords."
+  []
+  (set (keys @mode-registry)))
 
 
 (defn mode-from-extension

@@ -35,3 +35,17 @@
     (is (= :fundamental-mode (:mode (mode/set-buffer-mode {:name "*scratch*}"})))))
   (testing "buffer mode preserves existing mode when already set"
     (is (= :special-mode (:mode (mode/set-buffer-mode {:filepath "foo.clj" :mode :special-mode}))))))
+
+
+(deftest test-mode-registry
+  (testing "fundamental-mode and text-mode are registered by default"
+    (is (contains? (mode/registered-modes) :fundamental-mode))
+    (is (contains? (mode/registered-modes) :text-mode)))
+  (testing "registered modes include a display name and keymap"
+    (let [fundamental (get @mode/mode-registry :fundamental-mode)
+          text (get @mode/mode-registry :text-mode)]
+      (is (= "Fundamental" (:name fundamental)))
+      (is (= "Text" (:name text)))
+      (is (map? (:keymap fundamental)))
+      (is (map? (:keymap text)))
+      (is (= :fundamental-mode (:parent text))))))
