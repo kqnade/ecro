@@ -5,6 +5,28 @@
     [ecro.mise :as mise]))
 
 
+(deftest test-normalize-tool-name
+  (testing "simple tool names become keywords"
+    (is (= :node (mise/normalize-tool-name "node")))
+    (is (= :rust (mise/normalize-tool-name "rust"))))
+  (testing "version suffixes are stripped"
+    (is (= :node (mise/normalize-tool-name "node@20")))
+    (is (= :java (mise/normalize-tool-name "java@21"))))
+  (testing "backend prefixes are stripped"
+    (is (= :ripgrep (mise/normalize-tool-name "ubi:BurntSushi/ripgrep")))
+    (is (= :nodejs (mise/normalize-tool-name "asdf:nodejs"))))
+  (testing "special characters become kebab separators"
+    (is (= :clojure-cli (mise/normalize-tool-name "clojure_cli")))
+    (is (= :some-tool (mise/normalize-tool-name "some.tool")))))
+
+
+(deftest test-normalize-tools
+  (testing "returns a sorted set of normalized keywords"
+    (is (= #{:java :node :rust} (mise/normalize-tools ["node" "rust" "java@21"]))))
+  (testing "empty input yields empty set"
+    (is (= #{} (mise/normalize-tools [])))))
+
+
 (deftest test-parse-tools
   (testing "parses simple tool declarations"
     (is (= ["node" "rust"] (mise/parse-tools "[tools]\nnode = \"20\"\nrust = \"1.70\""))))

@@ -4,13 +4,14 @@
 
 ### mise project tooling detection
 
-- [ ] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
-- [ ] Parse `mise.toml` `[tools]` for project tooling detection
+- [x] Walk parent directories from buffer path up to HOME or git root to find `mise.toml`
+- [x] Parse `mise.toml` `[tools]` for project tooling detection
 - [ ] Normalize mise tool names into a keyword set
 - [ ] Cache mise detection result globally
 - [ ] Infer analyzer / LSP candidates from detected mise tools
 - [ ] Return an empty mise detection result when `mise.toml` is missing
 - [ ] Keep mise tooling separate from ecro editor config
+- [ ] Optionally inspect mise install cache as a fallback tooling signal
 
 ## Medium
 

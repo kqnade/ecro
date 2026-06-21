@@ -55,6 +55,27 @@
          vec)))
 
 
+(defn normalize-tool-name
+  "Normalize a mise tool name into a keyword.
+   Strips version suffixes and path/backend prefixes, then kebab-cases the remainder."
+  [tool-name]
+  (let [base (-> tool-name
+                 str/lower-case
+                 (str/split #"@")
+                 first)
+        name-only (last (str/split base #"[:/]"))
+        normalized (str/replace name-only #"[^a-z0-9]+" "-")]
+    (keyword normalized)))
+
+
+(defn normalize-tools
+  "Normalize a sequence of mise tool names into a sorted set of keywords."
+  [tools]
+  (->> tools
+       (map normalize-tool-name)
+       (into (sorted-set))))
+
+
 (defn load-tools
   "Load and parse the [tools] section from a mise.toml file.
    Returns a vector of tool name strings, or nil if the file is missing."
