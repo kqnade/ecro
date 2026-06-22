@@ -126,21 +126,66 @@
      :lsps (vec (distinct (mapcat :lsps candidates)))}))
 
 
+(defn default-mise-cache-dir
+  "Return the default mise install cache directory under HOME."
+  [home-dir]
+  (when home-dir
+    (.getAbsolutePath (io/file home-dir ".local" "share" "mise" "installs"))))
+
+
+(defn resolve-mise-cache-dir
+  "Resolve the mise install cache directory.
+   Prefers the MISE_DATA_DIR environment variable, then falls back to
+   ~/.local/share/mise/installs."
+  [home-dir]
+  (or (when-let [data-dir (System/getenv "MISE_DATA_DIR")]
+        (.getAbsolutePath (io/file data-dir "installs")))
+      (default-mise-cache-dir home-dir)))
+
+
+(defn load-tools-from-cache
+  "List tool names present in the mise install cache directory.
+   Returns a vector of tool name strings, or nil if the directory is missing."
+  [cache-dir]
+  (when (and cache-dir (.exists (io/file cache-dir)))
+    (->> (.listFiles (io/file cache-dir))
+         (filter #(.isDirectory %))
+         (map #(.getName %))
+         (into []))))
+
+
 (defn detect-project-tools
   "Detect project tools for a file path. Returns a map with:
-   :mise-path, :tools, :analyzers, :lsps."
-  [filepath home-dir]
-  (if-let [mise-path (find-mise-toml filepath home-dir)]
-    (let [tools (normalize-tools (load-tools mise-path))
-          candidates (infer-candidates tools)]
-      {:mise-path mise-path
-       :tools tools
-       :analyzers (:analyzers candidates)
-       :lsps (:lsps candidates)})
-    {:mise-path nil
-     :tools #{}
-     :analyzers []
-     :lsps []}))
+   :mise-path, :cache-path, :tools, :analyzers, :lsps.
+   Accepts an optional opts map:
+     :cache-fallback? - if true, inspect the mise install cache when no
+                        mise.toml is found (default false)
+     :cache-dir       - override the cache directory to inspect"
+  ([filepath home-dir]
+   (detect-project-tools filepath home-dir {}))
+  ([filepath home-dir opts]
+   (if-let [mise-path (find-mise-toml filepath home-dir)]
+     (let [tools (normalize-tools (load-tools mise-path))
+           candidates (infer-candidates tools)]
+       {:mise-path mise-path
+        :cache-path nil
+        :tools tools
+        :analyzers (:analyzers candidates)
+        :lsps (:lsps candidates)})
+     (if (:cache-fallback? opts)
+       (let [cache-dir (or (:cache-dir opts) (resolve-mise-cache-dir home-dir))
+             tools (normalize-tools (load-tools-from-cache cache-dir))
+             candidates (infer-candidates tools)]
+         {:mise-path nil
+          :cache-path (.getAbsolutePath (io/file cache-dir))
+          :tools tools
+          :analyzers (:analyzers candidates)
+          :lsps (:lsps candidates)})
+       {:mise-path nil
+        :cache-path nil
+        :tools #{}
+        :analyzers []
+        :lsps []}))))
 
 
 (defn project-root
@@ -154,11 +199,14 @@
 
 
 (defn detect-project-tools-cached
-  "Detect project tools, using and updating the global cache."
-  [filepath home-dir]
-  (let [root (project-root filepath home-dir)]
-    (if-let [cached (cached-result root)]
-      cached
-      (let [result (detect-project-tools filepath home-dir)]
-        (cache-result root result)
-        result))))
+  "Detect project tools, using and updating the global cache.
+   Accepts the same optional opts map as detect-project-tools."
+  ([filepath home-dir]
+   (detect-project-tools-cached filepath home-dir {}))
+  ([filepath home-dir opts]
+   (let [root (project-root filepath home-dir)]
+     (if-let [cached (cached-result root)]
+       cached
+       (let [result (detect-project-tools filepath home-dir opts)]
+         (cache-result root result)
+         result)))))

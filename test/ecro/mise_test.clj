@@ -27,6 +27,50 @@
     (is (= #{} (mise/normalize-tools [])))))
 
 
+(deftest test-detect-project-tools-cache-fallback
+  (testing "falls back to mise install cache when no mise.toml exists"
+    (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_cache_fallback_" (System/currentTimeMillis)))
+          home (io/file tmp "home")
+          project (io/file home "project")
+          cache (io/file tmp "mise" "installs")]
+      (.mkdirs project)
+      (.mkdirs (io/file cache "node" "20.0.0"))
+      (.mkdirs (io/file cache "rust" "1.70.0"))
+      (let [result (mise/detect-project-tools (io/file project "foo.clj") home {:cache-fallback? true :cache-dir cache})]
+        (is (nil? (:mise-path result)))
+        (is (= (.getAbsolutePath cache) (:cache-path result)))
+        (is (= #{:node :rust} (:tools result)))
+        (is (vector? (:analyzers result)))
+        (is (vector? (:lsps result))))
+      (.delete (io/file cache "rust" "1.70.0"))
+      (.delete (io/file cache "rust"))
+      (.delete (io/file cache "node" "20.0.0"))
+      (.delete (io/file cache "node"))
+      (.delete cache)
+      (.delete (io/file tmp "mise"))
+      (.delete project)
+      (.delete home)
+      (.delete tmp)))
+  (testing "skips cache fallback when disabled"
+    (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_cache_disabled_" (System/currentTimeMillis)))
+          home (io/file tmp "home")
+          project (io/file home "project")
+          cache (io/file tmp "mise" "installs")]
+      (.mkdirs project)
+      (.mkdirs (io/file cache "node" "20.0.0"))
+      (let [result (mise/detect-project-tools (io/file project "foo.clj") home {:cache-fallback? false :cache-dir cache})]
+        (is (nil? (:mise-path result)))
+        (is (nil? (:cache-path result)))
+        (is (= #{} (:tools result))))
+      (.delete (io/file cache "node" "20.0.0"))
+      (.delete (io/file cache "node"))
+      (.delete cache)
+      (.delete (io/file tmp "mise"))
+      (.delete project)
+      (.delete home)
+      (.delete tmp))))
+
+
 (deftest test-detect-project-tools
   (testing "detects tools when mise.toml exists"
     (let [tmp (io/file (System/getProperty "java.io.tmpdir") (str "ecro_mise_detect_" (System/currentTimeMillis)))
