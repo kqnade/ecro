@@ -2,8 +2,6 @@
 
 ## Next
 
-- [ ] Optionally inspect mise install cache as a fallback tooling signal
-
 ## Low
 
 - [ ] Implement `ESC %` `query-replace`
@@ -16,6 +14,8 @@
 - [ ] Integrate SKK Japanese input mode
 
 ## Completed
+
+- [x] Optionally inspect mise install cache as a fallback tooling signal
 
 - [x] Implement `M-f` `forward-word`
 - [x] Implement `M-b` `backward-word`
