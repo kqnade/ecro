@@ -91,7 +91,20 @@ pub extern "C" fn ecro_leave_alternate_screen() -> i32 {
 ///
 /// `width` and `height` must be valid writable pointers to `i32` values.
 pub unsafe extern "C" fn ecro_get_terminal_size(width: *mut i32, height: *mut i32) -> i32 {
-    match crossterm::terminal::size() {
+    let size = crossterm::terminal::size().or_else(|_| {
+        let w = std::env::var("COLUMNS")
+            .ok()
+            .and_then(|s| s.parse::<u16>().ok());
+        let h = std::env::var("LINES")
+            .ok()
+            .and_then(|s| s.parse::<u16>().ok());
+        match (w, h) {
+            (Some(w), Some(h)) => Ok((w, h)),
+            _ => Err(std::io::Error::other("no terminal size available")),
+        }
+    });
+
+    match size {
         Ok((w, h)) => {
             unsafe {
                 *width = w as i32;
