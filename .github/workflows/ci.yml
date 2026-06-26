@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/ecro-core/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/ecro-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Rust
+        working-directory: rust/ecro-core
+        run: cargo build --release
+
+      - name: Test Rust
+        working-directory: rust/ecro-core
+        run: cargo test
+
+      - name: Lint Rust
+        working-directory: rust/ecro-core
+        run: cargo clippy -- -D warnings
+
+      - name: Check Rust formatting
+        working-directory: rust/ecro-core
+        run: cargo fmt --check
+
+  clojure:
+    runs-on: ubuntu-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Clojure
+        uses: DeLaGuardo/setup-clojure@14.2
+        with:
+          cli: 1.12.5.1654
+
+      - name: Cache Clojure deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-clojure-${{ hashFiles('deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-clojure-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/ecro-core/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/ecro-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build Rust
+        working-directory: rust/ecro-core
+        run: cargo build --release
+
+      - name: Test Clojure
+        run: clojure -M:test
