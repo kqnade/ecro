@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools with mise
+        uses: jdx/mise-action@v2
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/ecro-core/target/
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('rust/ecro-core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-cargo-
+
+      - name: Cache Clojure deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-${{ runner.arch }}-clojure-${{ hashFiles('deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-clojure-
+
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
+      - name: Build native image
+        run: ./script/build-native.sh
+
+      - name: Package binary
+        run: |
+          chmod +x ./ecro
+          tar -czf "ecro-${{ github.ref_name }}-${{ runner.os }}-${{ runner.arch }}.tar.gz" ./ecro
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecro-${{ runner.os }}-${{ runner.arch }}
+          path: ecro-${{ github.ref_name }}-${{ runner.os }}-${{ runner.arch }}.tar.gz
+
+  release:
+    needs: build-native
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.tar.gz
+          generate_release_notes: true

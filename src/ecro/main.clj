@@ -1,4 +1,5 @@
 (ns ecro.main
+  (:gen-class)
   (:require
     [ecro.bindings :as bindings]
     [ecro.key :as key]
