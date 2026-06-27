@@ -24,7 +24,7 @@
     "schedule": ["at any time"]
   },
   "reviewers": [
-    "team:infra"
+    "kqnade"
   ],
   "assignAutomerge": true,
   "assigneesFromCodeOwners": true,
