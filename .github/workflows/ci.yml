@@ -18,7 +18,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -64,7 +64,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -81,7 +81,7 @@ jobs:
         run: cargo build --release
 
       - name: Cache Clojure deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-clojure-${{ hashFiles('deps.edn') }}
@@ -116,7 +116,7 @@ jobs:
         uses: jdx/mise-action@v2
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -129,7 +129,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Cache Clojure deps
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-clojure-${{ hashFiles('deps.edn') }}
