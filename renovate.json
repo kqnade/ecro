@@ -1,6 +1,43 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:best-practices",
+    "helpers:pinGitHubActionDigestsToSemver",
+    ":timezone(Asia/Tokyo)",
+    ":prHourlyLimitNone"
+  ],
+  "labels": ["dependencies"],
+  "schedule": [
+    "* 23 * * 1-5",
+    "* 0-4 * * 1-5",
+    "* * * * 0,6"
+  ],
+  "automerge": true,
+  "automergeStrategy": "squash",
+  "minimumReleaseAge": "14 days",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["dependencies", "security"],
+    "automerge": true,
+    "minimumReleaseAge": "0 days",
+    "schedule": ["at any time"]
+  },
+  "reviewers": [
+    "team:infra"
+  ],
+  "assignAutomerge": true,
+  "assigneesFromCodeOwners": true,
+  "assigneesSampleSize": 1,
+  "packageRules": [
+    {
+      "description": "github-actions の digest 更新は Dependency Dashboard 経由の手動承認とする",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest"],
+      "dependencyDashboardApproval": true
+    }
+  ],
+  "includePaths": [
+    ".github/workflows/**"
   ]
 }
