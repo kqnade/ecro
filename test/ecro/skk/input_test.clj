@@ -79,3 +79,16 @@
       (is (= "べんり" (:text buf)))
       (is (skk-state/henkan-on? buf))
       (is (= 0 (skk-state/henkan-start buf))))))
+
+
+(deftest test-okurigana-input
+  (testing "second uppercase marks okuri char"
+    (let [buf (-> (skk-buffer)
+                  (input/handle-char \T)
+                  (input/handle-char \u)
+                  (input/handle-char \y)
+                  (input/handle-char \o)
+                  (input/handle-char \I))]
+      (is (= "つよい" (:text buf)))
+      (is (skk-state/henkan-on? buf))
+      (is (= "i" (get-in buf [:skk :okuri-char]))))))

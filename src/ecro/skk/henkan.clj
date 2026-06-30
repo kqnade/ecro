@@ -49,7 +49,10 @@
   [buffer dict]
   (let [midashi (current-midashi buffer)
         okuri-char (get-in buffer [:skk :okuri-char])
-        cands (lookup-candidates dict midashi okuri-char)]
+        base-midashi (if okuri-char
+                       (subs midashi 0 (- (count midashi) (count okuri-char)))
+                       midashi)
+        cands (lookup-candidates dict base-midashi okuri-char)]
     (if (seq cands)
       (let [start (skk-state/henkan-start buffer)
             end (:point buffer)

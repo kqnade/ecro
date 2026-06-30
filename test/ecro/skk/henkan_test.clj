@@ -85,13 +85,16 @@
       (is (nil? (skk-state/henkan-mode buf))))))
 
 
-(deftest test-no-candidates-notification
-  (testing "start conversion with no candidates warns"
-    (let [dict {:okuri-ari {} :okuri-nasi {}}
+(deftest test-okuri-ari-lookup
+  (testing "lookup uses midashi + okuri-char for okuri-ari entries"
+    (let [dict {:okuri-ari {"つよi" ["強い"]}
+                :okuri-nasi {"つよ" ["強" "強さ"]}}
           buf (-> (skk-buffer)
-                  (assoc :text "みせ" :point 2)
+                  (assoc :text "つよい" :point 3)
                   (skk-state/set-henkan-mode :on)
                   (skk-state/set-henkan-start 0)
+                  (assoc-in [:skk :okuri-char] "i")
+                  (henkan/set-henkan-key "つよい")
                   (henkan/start dict))]
-      (is (= "みせ" (:text buf)))
-      (is (= :warn (get-in buf [:notification :level]))))))
+      (is (= "強い" (:text buf)))
+      (is (skk-state/active-conversion? buf)))))
