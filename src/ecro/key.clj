@@ -20,14 +20,30 @@
 
 
 (defn key-name
-  "Return the keymap name for a terminal key code and modifier bitset."
+  "Return the keymap name for a terminal key code and modifier bitset.
+
+  The terminal adapter uses Kitty keyboard protocol, so key codes are the
+  Unicode codepoint of the character and control/alt/shift are reported as
+  modifier flags. For example, C-m is code 109 with control modifier, while
+  RET is code 13 with no modifier."
   [key-code modifiers]
-  (let [alt? (pos? (bit-and modifiers 2))
+  (let [control? (pos? (bit-and modifiers 1))
+        alt? (pos? (bit-and modifiers 2))
+        shift? (pos? (bit-and modifiers 4))
+        base-char (when (and (>= key-code 32) (< key-code 127)) (char key-code))
         base (cond
-               (= key-code 31) "C-/"
-               (and (= key-code 26) (shifted? modifiers)) "C-S-z"
-               (< key-code 32) (str "C-" (char (+ key-code 96)))
-               :else (str (char key-code)))]
+               (= key-code 13) "RET"
+               (= key-code 9) "TAB"
+               (= key-code 27) "ESC"
+               (= key-code 127) "BS"
+               (and control? shift? base-char)
+               (str "C-S-" (Character/toLowerCase ^Character base-char))
+               (and control? base-char)
+               (str "C-" (Character/toLowerCase ^Character base-char))
+               (and shift? base-char)
+               (str "S-" base-char)
+               base-char (str base-char)
+               :else (str key-code))]
     (if alt?
       (str "M-" base)
       base)))

@@ -57,7 +57,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (ecro.kill-ring/make-kill-ring)}
-          new-state (main/handle-key state 11 1)] ; Ctrl-k
+          new-state (main/handle-key state (int \k) 1)] ; Ctrl-k
       (is (= "hello" (:text (:current-buffer new-state))))
       (is (= " world" (ecro.kill-ring/yank (:kill-ring new-state)))))))
 
@@ -69,8 +69,8 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          undone (main/handle-key state 26 1)
-          redone (main/handle-key undone 26 5)]
+          undone (main/handle-key state (int \z) 1)
+          redone (main/handle-key undone (int \Z) 5)]
       (is (= "" (:text (:current-buffer undone))))
       (is (= "a" (:text (:current-buffer redone)))))))
 
@@ -169,7 +169,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          new-state (main/handle-key state 31 1)]
+          new-state (main/handle-key state (int \/) 1)]
       (is (= "" (:text (:current-buffer new-state)))))))
 
 
@@ -190,7 +190,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          new-state (main/handle-key state 24 1)]
+          new-state (main/handle-key state (int \x) 1)]
       (is (= "heo" (:text (:current-buffer new-state))))
       (is (= "ll" (kr/yank (:kill-ring new-state))))
       (is (nil? (:mark (:current-buffer new-state)))))))
@@ -211,7 +211,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          new-state (main/handle-key state 24 1)]
+          new-state (main/handle-key state (int \x) 1)]
       (is (= "he" (:text (:current-buffer new-state))))
       (is (= "llo" (kr/yank (:kill-ring new-state))))
       (is (nil? (:mark (:current-buffer new-state)))))))
@@ -234,8 +234,8 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          cut (main/handle-key state 24 1)
-          undone (main/handle-key cut 26 1)]
+          cut (main/handle-key state (int \x) 1)
+          undone (main/handle-key cut (int \z) 1)]
       (is (= "heo" (:text (:current-buffer cut))))
       (is (= "hello" (:text (:current-buffer undone))))
       (is (= 4 (:point (:current-buffer undone)))))))
@@ -258,7 +258,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          new-state (main/handle-key state 3 1)]
+          new-state (main/handle-key state (int \c) 1)]
       (is (= "hello" (:text (:current-buffer new-state))))
       (is (= "ll" (kr/yank (:kill-ring new-state)))))))
 
@@ -272,7 +272,7 @@
                  :key-sequence []
                  :kill-ring (-> (kr/make-kill-ring)
                                 (kr/kill-text " there"))}
-          new-state (main/handle-key state 22 1)]
+          new-state (main/handle-key state (int \v) 1)]
       (is (= "hi there" (:text (:current-buffer new-state)))))))
 
 
@@ -285,8 +285,8 @@
                  :key-sequence []
                  :kill-ring (-> (kr/make-kill-ring)
                                 (kr/kill-text " there"))}
-          yanked (main/handle-key state 22 1)
-          undone (main/handle-key yanked 26 1)]
+          yanked (main/handle-key state (int \v) 1)
+          undone (main/handle-key yanked (int \z) 1)]
       (is (= "hi there" (:text (:current-buffer yanked))))
       (is (= "hi" (:text (:current-buffer undone))))
       (is (= 2 (:point (:current-buffer undone)))))))

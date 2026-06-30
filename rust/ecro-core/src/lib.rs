@@ -1,10 +1,16 @@
 use std::sync::Mutex;
 
+use crossterm::ExecutableCommand;
+use crossterm::event::{
+    KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+};
+
 static TERMINAL_STATE: Mutex<TerminalState> = Mutex::new(TerminalState::new());
 
 struct TerminalState {
     raw_mode: bool,
     alternate_screen: bool,
+    keyboard_enhancement: bool,
 }
 
 impl TerminalState {
@@ -12,8 +18,24 @@ impl TerminalState {
         Self {
             raw_mode: false,
             alternate_screen: false,
+            keyboard_enhancement: false,
         }
     }
+}
+
+fn keyboard_enhancement_flags() -> KeyboardEnhancementFlags {
+    KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+        | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+}
+
+fn push_keyboard_enhancement_flags() -> std::io::Result<()> {
+    std::io::stdout().execute(PushKeyboardEnhancementFlags(keyboard_enhancement_flags()))?;
+    Ok(())
+}
+
+fn pop_keyboard_enhancement_flags() -> std::io::Result<()> {
+    std::io::stdout().execute(PopKeyboardEnhancementFlags)?;
+    Ok(())
 }
 
 #[unsafe(no_mangle)]
@@ -32,8 +54,10 @@ pub extern "C" fn ecro_shutdown() -> i32 {
 pub extern "C" fn ecro_enable_raw_mode() -> i32 {
     match crossterm::terminal::enable_raw_mode() {
         Ok(_) => {
+            let enhancement_ok = push_keyboard_enhancement_flags().is_ok();
             if let Ok(mut state) = TERMINAL_STATE.lock() {
                 state.raw_mode = true;
+                state.keyboard_enhancement = enhancement_ok;
             }
             0
         }
@@ -43,10 +67,17 @@ pub extern "C" fn ecro_enable_raw_mode() -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ecro_disable_raw_mode() -> i32 {
+    if let Ok(state) = TERMINAL_STATE.lock()
+        && state.keyboard_enhancement
+    {
+        let _ = pop_keyboard_enhancement_flags();
+    }
+
     match crossterm::terminal::disable_raw_mode() {
         Ok(_) => {
             if let Ok(mut state) = TERMINAL_STATE.lock() {
                 state.raw_mode = false;
+                state.keyboard_enhancement = false;
             }
             0
         }
@@ -150,19 +181,7 @@ fn encode_key_event(key_event: crossterm::event::KeyEvent) -> (i32, i32) {
 
     let modifiers = encode_modifiers(key_event.modifiers);
     let code = match key_event.code {
-        KeyCode::Char(c) => {
-            if key_event
-                .modifiers
-                .contains(crossterm::event::KeyModifiers::CONTROL)
-            {
-                match c {
-                    '/' => 31,
-                    _ => (c as u8 & 0x1f) as i32,
-                }
-            } else {
-                c as i32
-            }
-        }
+        KeyCode::Char(c) => c as i32,
         KeyCode::Up => 1001,
         KeyCode::Down => 1002,
         KeyCode::Left => 1003,
@@ -289,7 +308,7 @@ mod tests {
     fn test_encode_control_slash() {
         let event = KeyEvent::new(KeyCode::Char('/'), KeyModifiers::CONTROL);
         let (code, modifiers) = encode_key_event(event);
-        assert_eq!(code, 31);
+        assert_eq!(code, '/' as i32);
         assert_eq!(modifiers, MOD_CONTROL);
     }
 
@@ -300,7 +319,39 @@ mod tests {
             KeyModifiers::CONTROL | KeyModifiers::SHIFT,
         );
         let (code, modifiers) = encode_key_event(event);
-        assert_eq!(code, 26);
+        assert_eq!(code, 'Z' as i32);
         assert_eq!(modifiers, MOD_CONTROL | MOD_SHIFT);
+    }
+
+    #[test]
+    fn test_encode_enter_is_not_control_m() {
+        let event = KeyEvent::new(KeyCode::Enter, KeyModifiers::empty());
+        let (code, modifiers) = encode_key_event(event);
+        assert_eq!(code, 13);
+        assert_eq!(modifiers, 0);
+    }
+
+    #[test]
+    fn test_encode_control_m_distinct_from_enter() {
+        let event = KeyEvent::new(KeyCode::Char('m'), KeyModifiers::CONTROL);
+        let (code, modifiers) = encode_key_event(event);
+        assert_eq!(code, 'm' as i32);
+        assert_eq!(modifiers, MOD_CONTROL);
+    }
+
+    #[test]
+    fn test_encode_tab_is_not_control_i() {
+        let event = KeyEvent::new(KeyCode::Tab, KeyModifiers::empty());
+        let (code, modifiers) = encode_key_event(event);
+        assert_eq!(code, 9);
+        assert_eq!(modifiers, 0);
+    }
+
+    #[test]
+    fn test_encode_control_i_distinct_from_tab() {
+        let event = KeyEvent::new(KeyCode::Char('i'), KeyModifiers::CONTROL);
+        let (code, modifiers) = encode_key_event(event);
+        assert_eq!(code, 'i' as i32);
+        assert_eq!(modifiers, MOD_CONTROL);
     }
 }

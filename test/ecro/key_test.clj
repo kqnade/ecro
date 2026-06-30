@@ -9,9 +9,13 @@
 
 (deftest test-key-name-control-shift-and-control-slash
   (testing "terminal key codes map to keymap names"
-    (is (= "C-z" (key/key-name 26 1)))
-    (is (= "C-S-z" (key/key-name 26 5)))
-    (is (= "C-/" (key/key-name 31 1)))))
+    (is (= "C-z" (key/key-name (int \z) 1)))
+    (is (= "C-S-z" (key/key-name (int \Z) 5)))
+    (is (= "C-/" (key/key-name (int \/) 1)))
+    (is (= "RET" (key/key-name 13 0)))
+    (is (= "C-m" (key/key-name (int \m) 1)))
+    (is (= "TAB" (key/key-name 9 0)))
+    (is (= "C-i" (key/key-name (int \i) 1)))))
 
 
 (deftest test-key-name-alt
