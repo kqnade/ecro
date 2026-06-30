@@ -2,7 +2,8 @@
   (:require
     [clojure.string :as str]
     [ecro.buffer :as buffer]
-    [ecro.kill-ring :as kr]))
+    [ecro.kill-ring :as kr]
+    [ecro.skk.sources :as skk-sources]))
 
 
 (defn initial-state
@@ -18,7 +19,8 @@
      :kill-ring (kr/make-kill-ring)
      :notification nil
      :message nil
-     :minibuffer nil}))
+     :minibuffer nil
+     :skk-lookup-fn (skk-sources/default-lookup)}))
 
 
 (defn add-buffer

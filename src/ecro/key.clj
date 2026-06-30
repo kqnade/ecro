@@ -38,6 +38,7 @@
                (= key-code 13) "RET"
                (= key-code 9) "TAB"
                (= key-code 27) "ESC"
+               (= key-code 32) "SPC"
                (= key-code 127) "BS"
                (and control? shift? base-char)
                (str "C-S-" (Character/toLowerCase ^Character base-char))
@@ -124,7 +125,8 @@
   "Route key event to SKK input layer if it should be consumed."
   [editor-state key-name key-code]
   (when-let [buf (:current-buffer editor-state)]
-    (let [lookup-fn (skk-sources/default-lookup)
+    (let [lookup-fn (or (:skk-lookup-fn editor-state)
+                        (skk-sources/default-lookup))
           result (skk-input/handle-key-event buf key-name lookup-fn)]
       (when result
         (-> editor-state
