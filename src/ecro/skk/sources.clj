@@ -9,6 +9,10 @@
     [ecro.skk.skk-server :as skk-server]))
 
 
+(defonce ^:private server-available-state
+  (atom nil))
+
+
 (defn load-file-dict
   "Load dictionary from configured file paths.
 
@@ -31,6 +35,22 @@
     (jisyo/candidates dict midashi)))
 
 
+(defn- server-candidates
+  "Query the SKK server once and cache availability.
+
+  Returns nil when the server is unavailable so that make-lookup can fall
+  through to an empty result."
+  [server-cfg midashi okuri-char]
+  (when (not= false @server-available-state)
+    (let [cands (skk-server/candidates midashi okuri-char server-cfg)]
+      (if (seq cands)
+        (do (reset! server-available-state true)
+            cands)
+        (do (when (nil? @server-available-state)
+              (reset! server-available-state false))
+            nil)))))
+
+
 (defn make-lookup
   "Create a lookup function that searches sources in order.
 
@@ -45,24 +65,30 @@
         server-cfg (:skk-server sources)]
     (fn [midashi okuri-char]
       (or (seq (file-candidates dict midashi okuri-char))
-          (when (and server-cfg (skk-server/available? server-cfg))
-            (seq (skk-server/candidates midashi okuri-char server-cfg)))
+          (when server-cfg
+            (seq (server-candidates server-cfg midashi okuri-char)))
           []))))
 
 
 (defn default-sources
   "Build default sources from ecro config and environment.
 
-  Tries to connect to yaskkserv2 on 127.0.0.1:1178 if no explicit config."
+  Always includes the SKK server configuration for 127.0.0.1:1178; availability
+  is determined lazily during lookup."
   ([]
    (default-sources (skk-config/load-jisyo-paths)))
   ([paths]
-   (let [server-cfg {:host "127.0.0.1" :port 1178 :encoding "EUC-JP"}]
-     {:dict (load-file-dict paths)
-      :skk-server (when (skk-server/available? server-cfg) server-cfg)})))
+   {:dict (load-file-dict paths)
+    :skk-server {:host "127.0.0.1" :port 1178 :encoding "EUC-JP"}}))
+
+
+(defonce default-lookup-fn
+  (delay (make-lookup (default-sources))))
 
 
 (defn default-lookup
-  "Create a default lookup function using environment discovery."
+  "Create a default lookup function using environment discovery.
+
+  The result is cached after the first call."
   []
-  (make-lookup (default-sources)))
+  @default-lookup-fn)

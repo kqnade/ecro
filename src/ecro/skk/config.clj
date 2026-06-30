@@ -16,18 +16,36 @@
   (io/file (System/getProperty "user.home") name))
 
 
+(defn- read-skk-setq-from-file
+  "Read skk-jisyo and skk-large-jisyo setq forms from a single Elisp file."
+  [file]
+  (let [text (slurp file)]
+    (into {}
+          (keep (fn [[_ key value]]
+                  (when (#{"skk-jisyo" "skk-large-jisyo"} key)
+                    [(keyword key) value])))
+          (re-seq #"\(setq\s+(skk-jisyo|skk-large-jisyo)\s+\"([^\"]+)\"" text))))
+
+
 (defn- read-skk-init-setq
   "Conservatively read (setq skk-jisyo \"...\") and (setq skk-large-jisyo \"...\")
-  from ~/.skk without evaluating any Elisp. Returns a map of option keys."
+  from ~/.skk configuration without evaluating any Elisp.
+
+  If ~/.skk is a file, read it directly. If it is a directory, search
+  *.el files inside it and merge the discovered values."
   []
   (let [file (home-file ".skk")]
-    (if (.exists file)
-      (let [text (slurp file)]
-        (into {}
-              (keep (fn [[_ key value]]
-                      (when (#{"skk-jisyo" "skk-large-jisyo"} key)
-                        [(keyword key) value])))
-              (re-seq #"\(setq\s+(skk-jisyo|skk-large-jisyo)\s+\"([^\"]+)\"" text)))
+    (cond
+      (and (.exists file) (.isFile file))
+      (read-skk-setq-from-file file)
+
+      (and (.exists file) (.isDirectory file))
+      (apply merge
+             (map read-skk-setq-from-file
+                  (filter #(clojure.string/ends-with? (.getName %) ".el")
+                          (.listFiles file))))
+
+      :else
       {})))
 
 
