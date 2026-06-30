@@ -5,6 +5,7 @@
     [ecro.file :as file]
     [ecro.kill-ring :as kr]
     [ecro.minibuffer :as minibuffer]
+    [ecro.mode :as mode]
     [ecro.notification :as notification]
     [ecro.scroll :as scroll]
     [ecro.state :as state]
@@ -58,6 +59,16 @@
 
       (= command :list-buffers)
       (state/list-buffers editor-state)
+
+      (= command :toggle-skk)
+      (let [buf (:current-buffer editor-state)
+            new-buf (mode/toggle-minor-mode buf :skk-mode)
+            active? (mode/minor-mode-active? new-buf :skk-mode)]
+        (-> (state/assoc-current-buffer (assoc editor-state
+                                               :kill-ring kill-ring
+                                               :key-sequence [])
+                                        new-buf)
+            (notification/info (if active? "SKK enabled" "SKK disabled"))))
 
       :else
       (let [[new-buf new-kr] (case command

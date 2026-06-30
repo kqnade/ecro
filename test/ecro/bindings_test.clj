@@ -32,4 +32,5 @@
       (is (= :switch-to-buffer (keymap/lookup-key km ["ESC" "b"])))
       (is (= :kill-buffer (keymap/lookup-key km ["ESC" "k"])))
       (is (= :list-buffers (keymap/lookup-key km ["ESC" "B"])))
-      (is (= :keyboard-quit (keymap/lookup-key km ["ESC" "ESC"]))))))
+      (is (= :keyboard-quit (keymap/lookup-key km ["ESC" "ESC"])))
+      (is (= :toggle-skk (keymap/lookup-key km ["ESC" "n"]))))))

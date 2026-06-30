@@ -38,6 +38,7 @@
         (keymap/define-key [lk "b"] :switch-to-buffer)
         (keymap/define-key [lk "k"] :kill-buffer)
         (keymap/define-key [lk "B"] :list-buffers)
+        (keymap/define-key [lk "n"] :toggle-skk)
         (keymap/define-key [lk lk] :keyboard-quit))))
 
 

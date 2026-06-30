@@ -292,6 +292,24 @@
       (is (= 2 (:point (:current-buffer undone)))))))
 
 
+(deftest test-esc-n-toggles-skk-mode
+  (testing "ESC n toggles skk minor mode on and off"
+    (let [state {:current-buffer (b/make-buffer "*scratch*")
+                 :keymap main/default-keymap
+                 :key-sequence ["ESC"]
+                 :kill-ring (kr/make-kill-ring)}
+          enabled (main/handle-key state 110 0)
+          disabled (main/handle-key (assoc enabled :key-sequence ["ESC"]) 110 0)]
+      (is (= #{:skk-mode} (:minor-modes (:current-buffer enabled))))
+      (is (= {:level :info :message "SKK enabled"}
+             (:notification enabled)))
+      (is (= [] (:key-sequence enabled)))
+      (is (empty? (:minor-modes (:current-buffer disabled))))
+      (is (= {:level :info :message "SKK disabled"}
+             (:notification disabled)))
+      (is (= [] (:key-sequence disabled))))))
+
+
 (deftest test-esc-q-quit
   (testing "ESC q quits the editor"
     (let [state {:current-buffer (b/make-buffer "test")
