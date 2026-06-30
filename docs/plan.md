@@ -360,6 +360,7 @@ ecro/
 
 **設計方針**:
 - エディタコア（Clojure）が入力状態を管理し、Rust側は未変換のraw key eventを渡す
+- Kitty keyboard protocolで `C-m` と `RET` などのlegacy control code衝突を分離する
 - SKKはミニバッファー並の入力モードとして実装（global minor mode相当）
 - 辞書はEDNまたは独自バイナリ形式で管理。ユーザー辞書は `~/.ecro/skk/` に配置
 - 変換候補のポップアップは、既存のミニバッファー機構を流用または簡易overlayで実装
@@ -369,7 +370,7 @@ ecro/
 | SKKモードをtoggleできる | feat: skk minor mode |
 | アルファベット入力をかなに変換できる | feat: skk romaji-to-kana |
 | スペースで変換候補を順に巡回できる | feat: skk candidate cycle |
-| Enterで確定、C-gでキャンセルできる | feat: skk confirm/cancel |
+| 変換中はRET/C-mで確定、C-gでキャンセルできる | feat: skk confirm/cancel |
 | ユーザー辞書を読み込める | feat: skk user dictionary |
 | 辞書に単語を登録できる | feat: skk dictionary registration |
 | 送り仮名（おくりがな）を区別して変換できる | feat: skk okurigana handling |
