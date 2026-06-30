@@ -230,17 +230,27 @@
         :kana (get-in node [:output 1])
         :prefix (or (:next node) "")}
 
-       (and (map? node) (seq node))
+       (and (map? node) (some #(not (#{:output :next} %)) (keys node)))
        {:state :wait :prefix new-prefix}
 
        :else
        (if (seq prefix)
-         (let [prefix-output (get-in tree (concat (seq prefix) [:output]))]
-           (if prefix-output
+         (let [prefix-node (get-in tree (seq prefix))
+               prefix-output (:output prefix-node)]
+           (cond
+             prefix-output
              {:state :emit
               :kana (get-in prefix-output [1])
               :prefix ""
               :retry ch}
+
+             (= prefix "n")
+             {:state :emit
+              :kana "ん"
+              :prefix ""
+              :retry ch}
+
+             :else
              {:state :noop :prefix ""}))
          {:state :noop :prefix ""})))))
 
@@ -250,9 +260,13 @@
   ([tree ch]
    (step-katakana tree "" ch))
   ([tree prefix ch]
-   (let [result (step tree prefix ch)]
+   (let [result (step tree prefix ch)
+         new-prefix (str prefix ch)]
      (if (:kana result)
-       (assoc result :kana (get-in (get-in tree (concat (seq (str prefix ch)) [:output])) [0]))
+       (let [hiragana (:kana result)
+             output (or (:output (get-in tree (seq new-prefix)))
+                        (:output (get-in tree (seq prefix))))]
+         (assoc result :kana (get output 0)))
        result))))
 
 
