@@ -4,7 +4,8 @@
     [clojure.test :refer :all]
     [ecro.buffer :as b]
     [ecro.native :as native]
-    [ecro.render :as render]))
+    [ecro.render :as render]
+    [ecro.skk.state :as skk-state]))
 
 
 (deftest test-status-line-shows-key-sequence
@@ -67,3 +68,12 @@
           line (render/status-line state)]
       (is (= 10 (count (render/screen-line line 10 2))))
       (is (= 20 (count (render/screen-line line 20 2)))))))
+
+
+(deftest test-status-line-shows-skk-mode
+  (testing "status line shows SKK hiragana mode"
+    (let [buf (-> (b/make-buffer "test")
+                  (assoc :minor-modes #{:skk-mode})
+                  (skk-state/ensure-state))
+          state {:current-buffer buf :key-sequence [] :message nil}]
+      (is (str/includes? (render/status-line state) "SKK:かな")))))

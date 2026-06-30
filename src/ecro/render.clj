@@ -3,7 +3,8 @@
     [clojure.string :as str]
     [ecro.buffer :as buffer]
     [ecro.native :as native]
-    [ecro.notification :as notification]))
+    [ecro.notification :as notification]
+    [ecro.skk.ui :as skk-ui]))
 
 
 (defonce screen-buffer (atom []))
@@ -64,6 +65,7 @@
       (str " " name modified
            (when key-seq (str "  " key-seq))
            "    " (or (notification/text (:notification state))
+                      (skk-ui/status-message (:current-buffer state))
                       (:message state))))))
 
 
