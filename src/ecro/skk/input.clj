@@ -5,6 +5,7 @@
   when uppercase letters are typed."
   (:require
     [ecro.buffer :as buffer]
+    [ecro.skk.henkan :as henkan]
     [ecro.skk.kana :as kana]
     [ecro.skk.state :as skk-state]))
 
@@ -17,11 +18,6 @@
 (defn- katakana?
   [buffer]
   (= :katakana (skk-state/mode buffer)))
-
-
-(defn- latin?
-  [buffer]
-  (= :latin (skk-state/mode buffer)))
 
 
 (defn- step-fn
@@ -44,6 +40,14 @@
   "Insert kana string into buffer at point."
   [buffer kana-str]
   (reduce buffer/insert-char buffer kana-str))
+
+
+(defn- key-name->char
+  "Convert a simple key name to a character. Returns nil for non-printable."
+  [key-name]
+  (when (and (= 1 (count key-name))
+             (Character/isLetterOrDigit ^Character (first key-name)))
+    (first key-name)))
 
 
 (defn- handle-submode-toggle
@@ -142,6 +146,52 @@
 
     :else
     (buffer/insert-char buffer ch)))
+
+
+(defn handle-key
+  "Handle a special key while SKK is active.
+
+  Returns updated buffer or nil to indicate the key was not consumed."
+  [buffer key-name dict]
+  (case key-name
+    "SPC" (cond
+            (skk-state/active-conversion? buffer)
+            (henkan/cycle-next buffer)
+
+            (skk-state/henkan-on? buffer)
+            (let [midashi (subs (:text buffer)
+                                (skk-state/henkan-start buffer)
+                                (:point buffer))]
+              (henkan/start (henkan/set-henkan-key buffer midashi) dict))
+
+            :else nil)
+
+    ("C-g" "C-m" "RET")
+    (cond
+      (and (= key-name "C-g")
+           (or (skk-state/active-conversion? buffer)
+               (skk-state/henkan-on? buffer)
+               (seq (skk-state/kana-prefix buffer))))
+      (henkan/cancel buffer)
+
+      (and (#{"C-m" "RET"} key-name)
+           (skk-state/active-conversion? buffer))
+      (henkan/confirm buffer)
+
+      :else nil)
+
+    nil))
+
+
+(defn handle-key-event
+  "Process a key event while SKK is active.
+
+  Handles both printable characters and SKK special keys."
+  [buffer key-name dict]
+  (if-let [special-result (handle-key buffer key-name dict)]
+    special-result
+    (when-let [ch (key-name->char key-name)]
+      (handle-char buffer ch))))
 
 
 (defn flush-prefix
