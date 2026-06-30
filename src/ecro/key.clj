@@ -8,6 +8,9 @@
     [ecro.native :as native]
     [ecro.render :as render]
     [ecro.scroll :as scroll]
+    [ecro.skk.input :as skk-input]
+    [ecro.skk.sources :as skk-sources]
+    [ecro.skk.state :as skk-state]
     [ecro.state :as state]))
 
 
@@ -110,82 +113,113 @@
       :else state)))
 
 
+(defn- skk-active?
+  "Return true if SKK minor mode is active in the current buffer."
+  [editor-state]
+  (when-let [buf (:current-buffer editor-state)]
+    (skk-state/enabled? buf)))
+
+
+(defn- skk-handle-key
+  "Route key event to SKK input layer if it should be consumed."
+  [editor-state key-name key-code]
+  (when-let [buf (:current-buffer editor-state)]
+    (let [lookup-fn (skk-sources/default-lookup)
+          result (skk-input/handle-key-event buf key-name lookup-fn)]
+      (when result
+        (-> editor-state
+            (state/assoc-current-buffer result)
+            (assoc :key-sequence []))))))
+
+
+(defn- handle-regular-key
+  "Handle non-SKK key event."
+  [editor-state key-code modifiers]
+  (cond
+    (= key-code 127)
+    (state/assoc-current-buffer editor-state (buffer/delete-char-backward (:current-buffer editor-state)))
+
+    (= key-code 13)
+    (state/assoc-current-buffer editor-state (buffer/insert-newline (:current-buffer editor-state)))
+
+    (= key-code 9)
+    (state/assoc-current-buffer editor-state (buffer/insert-tab (:current-buffer editor-state)))
+
+    (= key-code 27)
+    (let [new-seq (conj (:key-sequence editor-state) "ESC")
+          result (keymap/lookup-key (:keymap editor-state) new-seq)]
+      (handle-prefix-result editor-state new-seq result))
+
+    (= key-code 1001)
+    (state/assoc-current-buffer editor-state
+                                (core/previous-line (prepare-selection (:current-buffer editor-state) modifiers)))
+
+    (= key-code 1002)
+    (state/assoc-current-buffer editor-state
+                                (core/next-line (prepare-selection (:current-buffer editor-state) modifiers)))
+
+    (= key-code 1003)
+    (state/assoc-current-buffer editor-state
+                                (core/backward-char (prepare-selection (:current-buffer editor-state) modifiers)))
+
+    (= key-code 1004)
+    (state/assoc-current-buffer editor-state
+                                (core/forward-char (prepare-selection (:current-buffer editor-state) modifiers)))
+
+    (= key-code 1005)
+    (state/assoc-current-buffer editor-state (core/move-beginning-of-line (:current-buffer editor-state)))
+
+    (= key-code 1006)
+    (state/assoc-current-buffer editor-state (core/move-end-of-line (:current-buffer editor-state)))
+
+    (= key-code 1007)
+    (let [[_ h] (or (native/get-terminal-size) [80 24])]
+      (state/assoc-current-buffer editor-state (scroll/scroll-up (:current-buffer editor-state) (dec h))))
+
+    (= key-code 1008)
+    (let [[_ h] (or (native/get-terminal-size) [80 24])]
+      (state/assoc-current-buffer editor-state (scroll/scroll-down (:current-buffer editor-state) (dec h))))
+
+    (= key-code 1009)
+    editor-state
+
+    (= key-code 1010)
+    (state/assoc-current-buffer editor-state (buffer/delete-char-forward (:current-buffer editor-state)))
+
+    (>= key-code 2000)
+    editor-state
+
+    :else
+    (let [key-str (key-name key-code modifiers)
+          new-seq (conj (:key-sequence editor-state) key-str)
+          result (keymap/lookup-key (:keymap editor-state) new-seq)]
+      (cond
+        (= result :prefix)
+        (assoc editor-state :key-sequence new-seq)
+
+        (nil? result)
+        (if (and (empty? (:key-sequence editor-state))
+                 (>= key-code 32)
+                 (< key-code 127))
+          (state/assoc-current-buffer editor-state (buffer/insert-char (:current-buffer editor-state) (char key-code)))
+          (assoc editor-state :key-sequence []))
+
+        :else
+        (command/execute-command editor-state result)))))
+
+
 (defn handle-key
   "Handle a key event and return updated state."
   [editor-state key-code modifiers]
   (if (:minibuffer editor-state)
     (handle-minibuffer-key editor-state key-code)
-    (cond
-      (= key-code 127)
-      (state/assoc-current-buffer editor-state (buffer/delete-char-backward (:current-buffer editor-state)))
-
-      (= key-code 13)
-      (state/assoc-current-buffer editor-state (buffer/insert-newline (:current-buffer editor-state)))
-
-      (= key-code 9)
-      (state/assoc-current-buffer editor-state (buffer/insert-tab (:current-buffer editor-state)))
-
-      (= key-code 27)
-      (let [new-seq (conj (:key-sequence editor-state) "ESC")
-            result (keymap/lookup-key (:keymap editor-state) new-seq)]
-        (handle-prefix-result editor-state new-seq result))
-
-      (= key-code 1001)
-      (state/assoc-current-buffer editor-state
-                                  (core/previous-line (prepare-selection (:current-buffer editor-state) modifiers)))
-
-      (= key-code 1002)
-      (state/assoc-current-buffer editor-state
-                                  (core/next-line (prepare-selection (:current-buffer editor-state) modifiers)))
-
-      (= key-code 1003)
-      (state/assoc-current-buffer editor-state
-                                  (core/backward-char (prepare-selection (:current-buffer editor-state) modifiers)))
-
-      (= key-code 1004)
-      (state/assoc-current-buffer editor-state
-                                  (core/forward-char (prepare-selection (:current-buffer editor-state) modifiers)))
-
-      (= key-code 1005)
-      (state/assoc-current-buffer editor-state (core/move-beginning-of-line (:current-buffer editor-state)))
-
-      (= key-code 1006)
-      (state/assoc-current-buffer editor-state (core/move-end-of-line (:current-buffer editor-state)))
-
-      (= key-code 1007)
-      (let [[_ h] (or (native/get-terminal-size) [80 24])]
-        (state/assoc-current-buffer editor-state (scroll/scroll-up (:current-buffer editor-state) (dec h))))
-
-      (= key-code 1008)
-      (let [[_ h] (or (native/get-terminal-size) [80 24])]
-        (state/assoc-current-buffer editor-state (scroll/scroll-down (:current-buffer editor-state) (dec h))))
-
-      (= key-code 1009)
-      editor-state
-
-      (= key-code 1010)
-      (state/assoc-current-buffer editor-state (buffer/delete-char-forward (:current-buffer editor-state)))
-
-      (>= key-code 2000)
-      editor-state
-
-      :else
-      (let [key-str (key-name key-code modifiers)
-            new-seq (conj (:key-sequence editor-state) key-str)
-            result (keymap/lookup-key (:keymap editor-state) new-seq)]
-        (cond
-          (= result :prefix)
-          (assoc editor-state :key-sequence new-seq)
-
-          (nil? result)
-          (if (and (empty? (:key-sequence editor-state))
-                   (>= key-code 32)
-                   (< key-code 127))
-            (state/assoc-current-buffer editor-state (buffer/insert-char (:current-buffer editor-state) (char key-code)))
-            (assoc editor-state :key-sequence []))
-
-          :else
-          (command/execute-command editor-state result))))))
+    (let [key-str (key-name key-code modifiers)]
+      (if (and (skk-active? editor-state)
+               (not (seq (:key-sequence editor-state)))
+               (not (= "ESC" key-str)))
+        (or (skk-handle-key editor-state key-str key-code)
+            (handle-regular-key editor-state key-code modifiers))
+        (handle-regular-key editor-state key-code modifiers)))))
 
 
 (defn process-event
