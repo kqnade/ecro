@@ -61,7 +61,7 @@
     buffer))
 
 
-(declare handle-char)
+(declare handle-char flush-prefix)
 
 
 (defn- process-emit
@@ -152,7 +152,7 @@
   "Handle a special key while SKK is active.
 
   Returns updated buffer or nil to indicate the key was not consumed."
-  [buffer key-name dict]
+  [buffer key-name lookup-fn]
   (case key-name
     "SPC" (cond
             (skk-state/active-conversion? buffer)
@@ -161,8 +161,9 @@
             (skk-state/henkan-on? buffer)
             (let [midashi (subs (:text buffer)
                                 (skk-state/henkan-start buffer)
-                                (:point buffer))]
-              (henkan/start (henkan/set-henkan-key buffer midashi) dict))
+                                (:point buffer))
+                  flushed (flush-prefix (henkan/set-henkan-key buffer midashi))]
+              (henkan/start flushed lookup-fn))
 
             :else nil)
 
@@ -187,8 +188,8 @@
   "Process a key event while SKK is active.
 
   Handles both printable characters and SKK special keys."
-  [buffer key-name dict]
-  (if-let [special-result (handle-key buffer key-name dict)]
+  [buffer key-name lookup-fn]
+  (if-let [special-result (handle-key buffer key-name lookup-fn)]
     special-result
     (when-let [ch (key-name->char key-name)]
       (handle-char buffer ch))))

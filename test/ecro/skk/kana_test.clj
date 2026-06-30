@@ -23,8 +23,13 @@
 
 
 (deftest test-step-n
-  (testing "n alone waits for next input"
+  (testing "n alone waits because it has child rules"
     (is (= {:state :wait :prefix "n"} (kana/step kana/base-tree "n")))))
+
+
+(deftest test-step-nn
+  (testing "nn emits n kana"
+    (is (= {:state :emit :kana "ん" :prefix ""} (kana/step kana/base-tree "n" "n")))))
 
 
 (deftest test-step-na
@@ -34,8 +39,8 @@
 
 (deftest test-make-tree-with-user-rules
   (testing "user rules override base rules"
-    (let [tree (kana/make-tree [["z" nil ["ゼット" "ぜっと"]]])]
-      (is (= {:state :emit :kana "ぜっと" :prefix ""} (kana/step tree "z"))))))
+    (let [tree (kana/make-tree [["zx" nil ["ゼット" "ぜっと"]]])]
+      (is (= {:state :emit :kana "ぜっと" :prefix ""} (kana/step tree "z" "x"))))))
 
 
 (deftest test-step-kana-mode

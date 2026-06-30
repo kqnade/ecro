@@ -92,3 +92,19 @@
       (is (= "つよい" (:text buf)))
       (is (skk-state/henkan-on? buf))
       (is (= "i" (get-in buf [:skk :okuri-char]))))))
+
+
+(deftest test-spc-starts-conversion
+  (testing "SPC starts conversion when henkan-on"
+    (let [lookup (fn [m o]
+                   (when (and (= m "にほん") (nil? o))
+                     ["日本" "二本"]))
+          buf (-> (skk-buffer)
+                  (input/handle-char \N)
+                  (input/handle-char \i)
+                  (input/handle-char \h)
+                  (input/handle-char \o)
+                  (input/handle-char \n)
+                  (input/handle-key "SPC" lookup))]
+      (is (= "日本" (:text buf)))
+      (is (skk-state/active-conversion? buf)))))

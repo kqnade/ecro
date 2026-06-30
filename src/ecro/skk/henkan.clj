@@ -5,7 +5,6 @@
   cancellation."
   (:require
     [ecro.buffer :as buffer]
-    [ecro.skk.jisyo :as jisyo]
     [ecro.skk.state :as skk-state]))
 
 
@@ -31,13 +30,11 @@
 
 
 (defn- lookup-candidates
-  "Search dictionaries for candidates.
+  "Search configured sources for candidates.
 
-  For okuri-ari conversion, okuri-char is appended to the midashi."
-  [dict midashi okuri-char]
-  (if okuri-char
-    (jisyo/candidates dict midashi okuri-char)
-    (jisyo/candidates dict midashi)))
+  lookup-fn is a function of [midashi okuri-char] returning candidates."
+  [lookup-fn midashi okuri-char]
+  (lookup-fn midashi okuri-char))
 
 
 (defn set-henkan-key
@@ -49,16 +46,16 @@
 (defn start
   "Start conversion from henkan-on mode using SPC.
 
-  Looks up candidates for the current midashi. If found, replaces the midashi
-  with the first candidate and enters active conversion. Returns updated buffer
-  and a status message."
-  [buffer dict]
+  lookup-fn takes [midashi okuri-char] and returns candidate strings.
+  If candidates are found, replaces the midashi with the first candidate and
+  enters active conversion."
+  [buffer lookup-fn]
   (let [midashi (current-midashi buffer)
         okuri-char (get-in buffer [:skk :okuri-char])
         base-midashi (if okuri-char
                        (subs midashi 0 (- (count midashi) (count okuri-char)))
                        midashi)
-        cands (lookup-candidates dict base-midashi okuri-char)]
+        cands (lookup-candidates lookup-fn base-midashi okuri-char)]
     (if (seq cands)
       (let [start (skk-state/henkan-start buffer)
             end (:point buffer)

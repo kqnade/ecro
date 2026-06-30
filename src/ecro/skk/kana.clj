@@ -86,6 +86,7 @@
    ["mya" nil ["ミャ" "みゃ"]]
    ["myo" nil ["ミョ" "みょ"]]
    ["myu" nil ["ミュ" "みゅ"]]
+   ["n" nil ["ン" "ん"]]
    ["n'" nil ["ン" "ん"]]
    ["na" nil ["ナ" "な"]]
    ["ne" nil ["ネ" "ね"]]
@@ -223,34 +224,27 @@
    (step tree "" ch))
   ([tree prefix ch]
    (let [new-prefix (str prefix ch)
-         node (get-in tree (seq new-prefix))]
+         node (get-in tree (seq new-prefix))
+         has-children? (and (map? node) (some #(not (#{:output :next} %)) (keys node)))
+         has-output? (:output node)]
      (cond
-       (:output node)
+       has-children?
+       {:state :wait :prefix new-prefix}
+
+       has-output?
        {:state :emit
         :kana (get-in node [:output 1])
         :prefix (or (:next node) "")}
-
-       (and (map? node) (some #(not (#{:output :next} %)) (keys node)))
-       {:state :wait :prefix new-prefix}
 
        :else
        (if (seq prefix)
          (let [prefix-node (get-in tree (seq prefix))
                prefix-output (:output prefix-node)]
-           (cond
-             prefix-output
+           (if prefix-output
              {:state :emit
               :kana (get-in prefix-output [1])
               :prefix ""
               :retry ch}
-
-             (= prefix "n")
-             {:state :emit
-              :kana "ん"
-              :prefix ""
-              :retry ch}
-
-             :else
              {:state :noop :prefix ""}))
          {:state :noop :prefix ""})))))
 
@@ -260,10 +254,9 @@
   ([tree ch]
    (step-katakana tree "" ch))
   ([tree prefix ch]
-   (let [result (step tree prefix ch)
-         new-prefix (str prefix ch)]
+   (let [result (step tree prefix ch)]
      (if (:kana result)
-       (let [hiragana (:kana result)
+       (let [new-prefix (str prefix ch)
              output (or (:output (get-in tree (seq new-prefix)))
                         (:output (get-in tree (seq prefix))))]
          (assoc result :kana (get output 0)))
