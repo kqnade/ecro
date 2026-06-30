@@ -1,4 +1,6 @@
-(ns ecro.skk.jisyo)
+(ns ecro.skk.jisyo
+  (:require
+    [clojure.java.io :as io]))
 
 
 (defn- trim-comment
@@ -59,3 +61,57 @@
    (let [key (if okuri-char (str midashi okuri-char) midashi)
          section (if okuri-char :okuri-ari :okuri-nasi)]
      (get-in dict [section key] []))))
+
+
+(defn update-candidate-order
+  "Move selected candidate to the front for the given midashi.
+
+  If okuri-char is provided, the lookup key becomes `midashi + okuri-char`
+  in the okuri-ari section. If the entry does not exist, it is created."
+  [dict midashi okuri-char selected]
+  (let [key (if okuri-char (str midashi okuri-char) midashi)
+        section (if okuri-char :okuri-ari :okuri-nasi)
+        current (get-in dict [section key] [])
+        new-cands (if (seq current)
+                    (vec (cons selected (remove #(= % selected) current)))
+                    [selected])]
+    (assoc-in dict [section key] new-cands)))
+
+
+(defn- format-entry
+  "Serialize a single dictionary entry."
+  [[midashi cands]]
+  (str midashi " /" (clojure.string/join "/" cands) "/"))
+
+
+(defn- format-section
+  "Serialize a section map into lines."
+  [entries]
+  (clojure.string/join "\n" (map format-entry entries)))
+
+
+(defn serialize
+  "Serialize parsed dictionary into SKK text format."
+  [dict]
+  (str ";; okuri-ari entries.\n"
+       (format-section (:okuri-ari dict)) "\n"
+       ";; okuri-nasi entries.\n"
+       (format-section (:okuri-nasi dict)) "\n"))
+
+
+(defn save
+  "Save parsed dictionary to path atomically with a backup.
+
+  Writes to a temporary file, backs up the existing file if present, then
+  moves the temporary file into place."
+  [path dict]
+  (let [target (io/file path)
+        temp (io/file (str path ".tmp"))
+        backup (io/file (str path ".bak"))
+        content (serialize dict)]
+    (io/make-parents target)
+    (spit temp content)
+    (when (.exists target)
+      (io/copy target backup))
+    (io/copy temp target)
+    (.delete temp)))

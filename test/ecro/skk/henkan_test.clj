@@ -1,8 +1,10 @@
 (ns ecro.skk.henkan-test
   (:require
+    [clojure.java.io :as io]
     [clojure.test :refer :all]
     [ecro.buffer :as b]
     [ecro.skk.henkan :as henkan]
+    [ecro.skk.jisyo :as jisyo]
     [ecro.skk.state :as skk-state]))
 
 
@@ -85,6 +87,18 @@
       (is (nil? (skk-state/henkan-mode buf))))))
 
 
+(deftest test-no-candidates-notification
+  (testing "start conversion with no candidates warns"
+    (let [dict {:okuri-ari {} :okuri-nasi {}}
+          buf (-> (skk-buffer)
+                  (assoc :text "みせ" :point 2)
+                  (skk-state/set-henkan-mode :on)
+                  (skk-state/set-henkan-start 0)
+                  (henkan/start dict))]
+      (is (= "みせ" (:text buf)))
+      (is (= :warn (get-in buf [:notification :level]))))))
+
+
 (deftest test-okuri-ari-lookup
   (testing "lookup uses midashi + okuri-char for okuri-ari entries"
     (let [dict {:okuri-ari {"つよi" ["強い"]}
@@ -98,3 +112,36 @@
                   (henkan/start dict))]
       (is (= "強い" (:text buf)))
       (is (skk-state/active-conversion? buf)))))
+
+
+(deftest test-confirm-updates-personal-dictionary
+  (testing "confirm captures selected candidate for dictionary update"
+    (let [dict {:okuri-ari {}
+                :okuri-nasi {"にほん" ["日本" "二本"]}}
+          buf (-> (skk-buffer)
+                  (assoc :text "にほん" :point 3)
+                  (skk-state/set-henkan-mode :on)
+                  (skk-state/set-henkan-start 0)
+                  (henkan/start dict)
+                  (henkan/cycle-next))
+          selected (henkan/selected-candidate buf)
+          updated-dict (jisyo/update-candidate-order dict
+                                                     (get-in buf [:skk :henkan-key])
+                                                     (get-in buf [:skk :okuri-char])
+                                                     selected)]
+      (is (= "二本" selected))
+      (is (= ["二本" "日本"] (get-in updated-dict [:okuri-nasi "にほん"]))))))
+
+
+(deftest test-save-confirmed-candidate
+  (testing "saving updated dictionary preserves candidate order"
+    (let [tmp-file (str (System/getProperty "java.io.tmpdir") "/ecro_skk_confirm_jisyo")
+          dict {:okuri-ari {} :okuri-nasi {"にほん" ["日本" "二本"]}}
+          updated (jisyo/update-candidate-order dict "にほん" nil "二本")]
+      (try
+        (jisyo/save tmp-file updated)
+        (is (= ["二本" "日本"] (get-in (jisyo/parse (slurp tmp-file)) [:okuri-nasi "にほん"])))
+        (finally
+          (io/delete-file tmp-file true)
+          (io/delete-file (str tmp-file ".bak") true)
+          (io/delete-file (str tmp-file ".tmp") true))))))

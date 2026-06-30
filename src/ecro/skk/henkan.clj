@@ -40,6 +40,12 @@
     (jisyo/candidates dict midashi)))
 
 
+(defn set-henkan-key
+  "Store the original midashi before conversion for cancellation."
+  [buffer midashi]
+  (assoc-in buffer [:skk :henkan-key] midashi))
+
+
 (defn start
   "Start conversion from henkan-on mode using SPC.
 
@@ -60,7 +66,8 @@
         (-> after-replace
             (skk-state/set-henkan-mode :active)
             (skk-state/set-henkan-end (+ start (count (first cands))))
-            (skk-state/set-candidates cands)))
+            (skk-state/set-candidates cands)
+            (set-henkan-key base-midashi)))
       (-> buffer
           (skk-state/clear-henkan)
           (assoc :notification {:level :warn :message (str "No SKK candidates: " midashi)})))))
@@ -96,6 +103,15 @@
     buffer))
 
 
+(defn selected-candidate
+  "Return the currently selected candidate, or nil if not in active conversion."
+  [buffer]
+  (when (skk-state/active-conversion? buffer)
+    (let [cands (skk-state/candidates buffer)
+          idx (skk-state/candidate-index buffer)]
+      (nth cands idx))))
+
+
 (defn confirm
   "Confirm the current candidate and clear henkan state."
   [buffer]
@@ -125,9 +141,3 @@
 
     :else
     (skk-state/cancel-prefix buffer)))
-
-
-(defn set-henkan-key
-  "Store the original midashi before conversion for cancellation."
-  [buffer midashi]
-  (assoc-in buffer [:skk :henkan-key] midashi))
