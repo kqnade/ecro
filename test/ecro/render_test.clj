@@ -99,6 +99,14 @@
     (is (= 2 (render/display-width "❤️")))))
 
 
+(deftest test-rendering-treats-emoji-sequences-as-single-graphemes
+  (testing "fully-qualified ZWJ and flag sequences occupy two cells atomically"
+    (doseq [emoji ["👨‍👩‍👧‍👦" "🇯🇵"]]
+      (is (= 2 (render/display-width emoji)))
+      (is (= emoji (render/screen-line emoji 2 2)))
+      (is (= " " (render/screen-line emoji 1 2))))))
+
+
 (deftest test-status-line-shows-skk-mode
   (testing "status line shows SKK hiragana mode"
     (let [buf (-> (b/make-buffer "test")

@@ -42,6 +42,7 @@
             [ecro_leave_alternate_screen [] int]
             [ecro_get_terminal_size [ints ints] int]
             [ecro_display_width [bytes int] int]
+            [ecro_prefix_utf16_length_for_width [bytes int int] int]
             [ecro_poll_event [] com.sun.jna.Pointer]
             [ecro_read_event [] com.sun.jna.Pointer]
             [ecro_free_event [com.sun.jna.Pointer] void]])
@@ -116,6 +117,16 @@
           width (.ecro_display_width lib bytes (alength bytes))]
       (when-not (neg? width)
         width))))
+
+
+(defn text-prefix-utf16-length-for-width
+  "Return the grapheme-aligned UTF-16 prefix length that fits in width."
+  [^String text width]
+  (when-let [lib @ecro-lib]
+    (let [bytes (.getBytes text StandardCharsets/UTF_8)
+          length (.ecro_prefix_utf16_length_for_width lib bytes (alength bytes) width)]
+      (when-not (neg? length)
+        length))))
 
 
 (defn decode-event-data

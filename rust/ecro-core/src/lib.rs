@@ -4,6 +4,7 @@ use crossterm::ExecutableCommand;
 use crossterm::event::{
     KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
+use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 static TERMINAL_STATE: Mutex<TerminalState> = Mutex::new(TerminalState::new());
@@ -165,6 +166,41 @@ pub unsafe extern "C" fn ecro_display_width(text: *const u8, length: i32) -> i32
         Ok(text) => i32::try_from(text.width()).unwrap_or(-1),
         Err(_) => -1,
     }
+}
+
+#[unsafe(no_mangle)]
+/// Return the UTF-16 length of the longest grapheme-aligned prefix within `maximum_width` cells.
+///
+/// # Safety
+///
+/// `text` must point to `length` readable bytes. The bytes must remain valid for the duration of
+/// the call.
+pub unsafe extern "C" fn ecro_prefix_utf16_length_for_width(
+    text: *const u8,
+    length: i32,
+    maximum_width: i32,
+) -> i32 {
+    if text.is_null() || length < 0 || maximum_width < 0 {
+        return -1;
+    }
+
+    let bytes = unsafe { std::slice::from_raw_parts(text, length as usize) };
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return -1;
+    };
+
+    let mut current_width = 0;
+    let mut utf16_length = 0;
+    for grapheme in text.graphemes(true) {
+        let grapheme_width = grapheme.width();
+        if current_width + grapheme_width > maximum_width as usize {
+            break;
+        }
+        current_width += grapheme_width;
+        utf16_length += grapheme.encode_utf16().count();
+    }
+
+    i32::try_from(utf16_length).unwrap_or(-1)
 }
 
 #[repr(C)]

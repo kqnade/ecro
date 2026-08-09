@@ -10,27 +10,16 @@
 (defonce screen-buffer (atom []))
 
 
-(defn- next-code-point
-  [^String text offset code-point]
-  (let [next-offset (+ offset (Character/charCount code-point))]
-    (when (< next-offset (count text))
-      (.codePointAt text next-offset))))
-
-
 (defn- terminal-width
   [text]
   (or (native/text-width text)
       (throw (IllegalStateException. "ecro_core is required to measure terminal text"))))
 
 
-(defn- code-point-width
-  [^String text offset code-point]
-  (let [code-point-end (+ offset (Character/charCount code-point))
-        next-point (next-code-point text offset code-point)
-        presentation-end (if (#{0xfe0e 0xfe0f} next-point)
-                           (+ code-point-end (Character/charCount next-point))
-                           code-point-end)]
-    (terminal-width (subs text offset presentation-end))))
+(defn- terminal-prefix-length
+  [text width]
+  (or (native/text-prefix-utf16-length-for-width text width)
+      (throw (IllegalStateException. "ecro_core is required to truncate terminal text"))))
 
 
 (defn- ansi-csi-end
@@ -55,6 +44,16 @@
     active?))
 
 
+(defn- plain-segment-end
+  [^String text offset stop-at-tab?]
+  (loop [index offset]
+    (if (or (>= index (count text))
+            (ansi-csi-end text index)
+            (and stop-at-tab? (= \tab (.charAt text index))))
+      index
+      (recur (inc index)))))
+
+
 (defn display-width
   "Return the number of terminal cells occupied by text."
   [^String text]
@@ -63,9 +62,9 @@
     (if (< offset (count text))
       (if-let [ansi-end (ansi-csi-end text offset)]
         (recur ansi-end width)
-        (let [code-point (.codePointAt text offset)]
-          (recur (+ offset (Character/charCount code-point))
-                 (+ width (code-point-width text offset code-point)))))
+        (let [segment-end (plain-segment-end text offset false)
+              segment (subs text offset segment-end)]
+          (recur segment-end (+ width (terminal-width segment)))))
       width)))
 
 
@@ -82,14 +81,17 @@
             (recur ansi-end
                    current-width
                    (sgr-active-after text offset ansi-end sgr-active?)))
-          (let [code-point (.codePointAt text offset)
-                code-point-length (Character/charCount code-point)
-                next-width (+ current-width (code-point-width text offset code-point))]
+          (let [segment-end (plain-segment-end text offset false)
+                segment (subs text offset segment-end)
+                segment-width (terminal-width segment)
+                next-width (+ current-width segment-width)]
             (if (<= next-width width)
               (do
-                (.appendCodePoint result code-point)
-                (recur (+ offset code-point-length) next-width sgr-active?))
+                (.append result segment)
+                (recur segment-end next-width sgr-active?))
               (do
+                (let [prefix-length (terminal-prefix-length segment (- width current-width))]
+                  (.append result (subs segment 0 prefix-length)))
                 (when sgr-active?
                   (.append result "\033[0m"))
                 (str result)))))
@@ -120,16 +122,14 @@
           (do
             (.append result (subs line offset ansi-end))
             (recur ansi-end col))
-          (let [code-point (.codePointAt line offset)
-                code-point-length (Character/charCount code-point)]
-            (if (= code-point (int \tab))
-              (let [spaces (- tab-width (mod col tab-width))]
-                (.append result (apply str (repeat spaces " ")))
-                (recur (+ offset code-point-length) (+ col spaces)))
-              (do
-                (.appendCodePoint result code-point)
-                (recur (+ offset code-point-length)
-                       (+ col (code-point-width line offset code-point)))))))
+          (if (= \tab (.charAt line offset))
+            (let [spaces (- tab-width (mod col tab-width))]
+              (.append result (apply str (repeat spaces " ")))
+              (recur (inc offset) (+ col spaces)))
+            (let [segment-end (plain-segment-end line offset true)
+                  segment (subs line offset segment-end)]
+              (.append result segment)
+              (recur segment-end (+ col (terminal-width segment))))))
         (str result)))))
 
 
