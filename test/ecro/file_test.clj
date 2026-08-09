@@ -5,9 +5,11 @@
     [ecro.file :as f])
   (:import
     (java.nio.file
-      Files)
+      Files
+      LinkOption)
     (java.nio.file.attribute
-      FileAttribute)))
+      FileAttribute
+      PosixFilePermissions)))
 
 
 (deftest test-read-file
@@ -52,6 +54,26 @@
         (is (= "old content" (slurp (.toFile old-file-link))))
         (finally
           (Files/deleteIfExists old-file-link)
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
+
+
+(deftest test-write-file-preserves-existing-permissions
+  (testing "atomic replacement keeps the existing file permissions"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_permissions_"
+                                              (make-array FileAttribute 0))
+          test-file (.resolve test-dir "target.txt")
+          permissions (PosixFilePermissions/fromString "rw-r-----")]
+      (try
+        (spit (.toFile test-file) "old content")
+        (Files/setPosixFilePermissions test-file permissions)
+        (f/write-file {:name "target.txt"
+                       :text "new content"
+                       :filepath (str test-file)})
+        (is (= permissions
+               (Files/getPosixFilePermissions test-file
+                                              (make-array LinkOption 0))))
+        (finally
           (Files/deleteIfExists test-file)
           (Files/deleteIfExists test-dir))))))
 

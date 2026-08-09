@@ -6,9 +6,21 @@
     (java.nio.file
       CopyOption
       Files
+      LinkOption
       StandardCopyOption)
     (java.nio.file.attribute
-      FileAttribute)))
+      FileAttribute
+      PosixFileAttributeView)))
+
+
+(defn- preserve-posix-permissions
+  [source target]
+  (when (Files/exists source (make-array LinkOption 0))
+    (when-let [attribute-view (Files/getFileAttributeView source
+                                                          PosixFileAttributeView
+                                                          (make-array LinkOption 0))]
+      (Files/setPosixFilePermissions target
+                                     (.permissions (.readAttributes attribute-view))))))
 
 
 (defn- atomic-spit
@@ -19,6 +31,7 @@
                                         ".tmp"
                                         (make-array FileAttribute 0))]
     (try
+      (preserve-posix-permissions target temp-file)
       (spit (.toFile temp-file) text)
       (Files/move temp-file
                   target
