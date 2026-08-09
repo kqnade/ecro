@@ -66,15 +66,24 @@
         (.getAbsolutePath library-file)))))
 
 
+(defn load-native-library
+  "Load the required Rust sidecar or fail with an actionable diagnostic."
+  [library]
+  (try
+    (Native/loadLibrary library (Class/forName "ecro.native.IEcroNative"))
+    (catch LinkageError error
+      (throw
+        (IllegalStateException.
+          (str "Required Rust sidecar could not be loaded: " library
+               ". Place " (System/mapLibraryName "ecro_core")
+               " next to the ecro executable.")
+          error)))))
+
+
 (defonce ecro-lib
   (delay
-    (try
-      (Native/loadLibrary (or (sibling-library-path (executable-path))
-                              "ecro_core")
-                          (Class/forName "ecro.native.IEcroNative"))
-      (catch Exception e
-        (println "Warning: Could not load ecro_core library:" (.getMessage e))
-        nil))))
+    (load-native-library (or (sibling-library-path (executable-path))
+                             "ecro_core"))))
 
 
 (defn init

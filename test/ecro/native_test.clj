@@ -124,6 +124,28 @@
           (io/delete-file temp-dir true))))))
 
 
+(deftest missing-rust-library-is-an-explicit-hard-failure
+  (testing "a missing Rust sidecar reports an actionable hard failure"
+    (let [loader (ns-resolve 'ecro.native 'load-native-library)
+          missing-library (io/file
+                            (System/getProperty "java.io.tmpdir")
+                            (str "missing-ecro-core-"
+                                 (System/nanoTime)
+                                 ".so"))]
+      (is (some? loader) "load-native-library is not implemented")
+      (when loader
+        (let [error (try
+                      (loader (.getAbsolutePath missing-library))
+                      nil
+                      (catch IllegalStateException caught
+                        caught))]
+          (is (some? error) "missing sidecar did not fail")
+          (when error
+            (is (re-find #"Required Rust sidecar could not be loaded"
+                         (.getMessage error)))
+            (is (instance? LinkageError (.getCause error)))))))))
+
+
 (deftest release-workflow-packages-native-distribution
   (testing "the release workflow uses the verified native packaging script"
     (is (re-find #"\./script/package-native\.sh"
@@ -131,7 +153,7 @@
 
 
 (deftest test-jna-library-loaded
-  (testing "JNA library is loaded or gracefully handles missing library"
+  (testing "JNA library is loaded from the Rust build output"
     (is lib-available?)))
 
 
