@@ -4,7 +4,8 @@
     [clojure.test :refer :all]
     [ecro.bindings :as bindings]
     [ecro.buffer :as b]
-    [ecro.key :as key]))
+    [ecro.key :as key]
+    [ecro.render :as render]))
 
 
 (deftest test-key-name-control-shift-and-control-slash
@@ -43,6 +44,25 @@
       (is (= [] (:key-sequence new-state)))
       (is (some? (:minibuffer new-state)))
       (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
+
+
+(deftest test-forward-incremental-search-integration
+  (testing "C-s searches as characters are typed and RET accepts the match"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          with-w (key/handle-key started (int \w) 0)
+          with-wo (key/handle-key with-w (int \o) 0)
+          accepted (key/handle-key with-wo 13 0)]
+      (is (= {:pattern "" :direction :forward :start-point 0}
+             (:isearch started)))
+      (is (= 6 (get-in with-w [:current-buffer :point])))
+      (is (= "wo" (get-in with-wo [:isearch :pattern])))
+      (is (= "I-search: wo" (render/status-line with-wo)))
+      (is (= 6 (get-in accepted [:current-buffer :point])))
+      (is (nil? (:isearch accepted))))))
 
 
 (deftest test-minibuffer-switch-to-buffer

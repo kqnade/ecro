@@ -55,8 +55,15 @@
 (defn status-line
   "Build the status line string from editor state."
   [state]
-  (if-let [mb (:minibuffer state)]
-    (str (:prompt mb) (:text (:buffer mb)))
+  (cond
+    (:isearch state)
+    (str "I-search: " (get-in state [:isearch :pattern]))
+
+    (:minibuffer state)
+    (let [mb (:minibuffer state)]
+      (str (:prompt mb) (:text (:buffer mb))))
+
+    :else
     (let [buf (:current-buffer state)
           name (or (:name buf) "*scratch*")
           modified (if (not= (:text buf) (:saved-text buf)) "*" "")

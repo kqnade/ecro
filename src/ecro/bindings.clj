@@ -13,6 +13,7 @@
     (-> (keymap/make-keymap)
         (keymap/define-key ["C-a"] :move-beginning-of-line)
         (keymap/define-key ["C-e"] :move-end-of-line)
+        (keymap/define-key ["C-s"] :isearch-forward)
         (keymap/define-key ["C-k"] :kill-line)
         (keymap/define-key ["C-z"] :undo)
         (keymap/define-key ["C-S-z"] :redo)

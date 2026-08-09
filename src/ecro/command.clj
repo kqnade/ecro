@@ -8,6 +8,7 @@
     [ecro.mode :as mode]
     [ecro.notification :as notification]
     [ecro.scroll :as scroll]
+    [ecro.search :as search]
     [ecro.state :as state]
     [ecro.undo :as undo]))
 
@@ -55,6 +56,12 @@
       (= command :write-file)
       (assoc editor-state
              :minibuffer (ecro.minibuffer/prompt-for "Write file: " :write-file)
+             :key-sequence [])
+
+      (= command :isearch-forward)
+      (assoc editor-state
+             :isearch (assoc (search/make-isearch :forward)
+                             :start-point (:point buf))
              :key-sequence [])
 
       (= command :list-buffers)

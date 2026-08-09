@@ -8,6 +8,7 @@
     [ecro.native :as native]
     [ecro.render :as render]
     [ecro.scroll :as scroll]
+    [ecro.search :as search]
     [ecro.skk.input :as skk-input]
     [ecro.skk.sources :as skk-sources]
     [ecro.skk.state :as skk-state]
@@ -114,6 +115,23 @@
       :else state)))
 
 
+(defn- handle-isearch-key
+  "Handle a key event while incremental search is active."
+  [editor-state key-code]
+  (cond
+    (= key-code 13)
+    (dissoc editor-state :isearch)
+
+    (>= key-code 32)
+    (let [isearch (search/isearch-add-char (:isearch editor-state) (char key-code))
+          buf (search/isearch-execute isearch (:current-buffer editor-state))]
+      (-> editor-state
+          (assoc :isearch isearch)
+          (state/assoc-current-buffer buf)))
+
+    :else editor-state))
+
+
 (defn- skk-active?
   "Return true if SKK minor mode is active in the current buffer."
   [editor-state]
@@ -213,15 +231,17 @@
 (defn handle-key
   "Handle a key event and return updated state."
   [editor-state key-code modifiers]
-  (if (:minibuffer editor-state)
-    (handle-minibuffer-key editor-state key-code)
-    (let [key-str (key-name key-code modifiers)]
-      (if (and (skk-active? editor-state)
-               (not (seq (:key-sequence editor-state)))
-               (not (= "ESC" key-str)))
-        (or (skk-handle-key editor-state key-str key-code)
-            (handle-regular-key editor-state key-code modifiers))
-        (handle-regular-key editor-state key-code modifiers)))))
+  (if (:isearch editor-state)
+    (handle-isearch-key editor-state key-code)
+    (if (:minibuffer editor-state)
+      (handle-minibuffer-key editor-state key-code)
+      (let [key-str (key-name key-code modifiers)]
+        (if (and (skk-active? editor-state)
+                 (not (seq (:key-sequence editor-state)))
+                 (not (= "ESC" key-str)))
+          (or (skk-handle-key editor-state key-str key-code)
+              (handle-regular-key editor-state key-code modifiers))
+          (handle-regular-key editor-state key-code modifiers))))))
 
 
 (defn process-event
