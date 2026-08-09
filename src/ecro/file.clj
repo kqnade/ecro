@@ -15,14 +15,20 @@
       UUID)))
 
 
+(defn- posix-attribute-view
+  [path]
+  (Files/getFileAttributeView path
+                              PosixFileAttributeView
+                              (make-array LinkOption 0)))
+
+
 (defn- preserve-posix-permissions
   [source target]
   (when (Files/exists source (make-array LinkOption 0))
-    (when-let [attribute-view (Files/getFileAttributeView source
-                                                          PosixFileAttributeView
-                                                          (make-array LinkOption 0))]
-      (Files/setPosixFilePermissions target
-                                     (.permissions (.readAttributes attribute-view))))))
+    (when-let [source-view (posix-attribute-view source)]
+      (when-let [target-view (posix-attribute-view target)]
+        (.setPermissions target-view
+                         (.permissions (.readAttributes source-view)))))))
 
 
 (defn- create-save-temp-file
