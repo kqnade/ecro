@@ -112,12 +112,17 @@
   (wt/collect-windows (:root-window frame)))
 
 
+(defn- window-index
+  [windows window]
+  (first (keep-indexed #(when (wt/same-window? %2 window) %1) windows)))
+
+
 (defn next-window
   "Get the next window in the frame."
   [frame window]
   (let [wins (get-windows frame)
-        idx (.indexOf wins window)]
-    (if (and (>= idx 0) (< (inc idx) (count wins)))
+        idx (window-index wins window)]
+    (if (and (some? idx) (< (inc idx) (count wins)))
       (nth wins (inc idx))
       (first wins))))
 

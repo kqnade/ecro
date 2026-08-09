@@ -74,6 +74,19 @@
       (is (= (first wins) (w/prev-window frame2 (second wins)))))))
 
 
+(deftest test-next-window-accepts-stale-handle
+  (testing "next-window identifies its starting point by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          stale-window (first (w/get-windows split-frame))
+          edited-buffer (b/insert-char (:buffer stale-window) \a)
+          updated-frame (w/assoc-selected-buffer split-frame edited-buffer)
+          expected-window (second (w/get-windows updated-frame))]
+      (is (= (:id expected-window)
+             (:id (w/next-window updated-frame stale-window)))))))
+
+
 (deftest test-select-window
   (testing "selecting a window updates the frame selection"
     (let [buf (b/make-buffer "test")
