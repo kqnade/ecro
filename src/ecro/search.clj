@@ -49,13 +49,20 @@
   "Execute i-search with current pattern. Returns updated buffer."
   [state buf]
   (let [pattern (:pattern state)
-        start-point (or (:start-point state) (:point buf))]
+        start-point (or (:start-point state) (:point buf))
+        anchor-point (:anchor-point state)
+        search-point (if (some? anchor-point)
+                       (if (= :backward (:direction state))
+                         (inc anchor-point)
+                         anchor-point)
+                       start-point)
+        fallback-point (or anchor-point start-point)]
     (if (seq pattern)
       (let [result (case (:direction state)
-                     :forward (search-forward (assoc buf :point start-point) pattern)
-                     :backward (search-backward (assoc buf :point start-point) pattern))]
-        (or result (assoc buf :point start-point)))
-      (assoc buf :point start-point))))
+                     :forward (search-forward (assoc buf :point search-point) pattern)
+                     :backward (search-backward (assoc buf :point search-point) pattern))]
+        (or result (assoc buf :point fallback-point)))
+      (assoc buf :point fallback-point))))
 
 
 (defn isearch-repeat

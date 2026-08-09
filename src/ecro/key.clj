@@ -140,7 +140,8 @@
   (let [isearch (assoc (:isearch editor-state) :direction direction)
         buf (search/isearch-repeat isearch
                                    (:current-buffer editor-state)
-                                   direction)]
+                                   direction)
+        isearch (assoc isearch :anchor-point (:point buf))]
     (-> editor-state
         (assoc :isearch isearch)
         (state/assoc-current-buffer buf))))

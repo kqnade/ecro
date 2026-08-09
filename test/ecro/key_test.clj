@@ -162,10 +162,12 @@
           started (key/handle-key state (int \s) 1)
           searched (key/handle-key started (int \f) 0)
           next-match (key/handle-key searched (int \s) 1)
-          previous-match (key/handle-key next-match (int \r) 1)]
+          refined (key/handle-key next-match (int \o) 0)
+          previous-match (key/handle-key refined (int \r) 1)]
       (is (= 4 (get-in next-match [:current-buffer :point])))
+      (is (= 4 (get-in refined [:current-buffer :point])))
       (is (= 0 (get-in previous-match [:current-buffer :point])))
-      (is (= "f" (get-in previous-match [:isearch :pattern])))
+      (is (= "fo" (get-in previous-match [:isearch :pattern])))
       (is (= :backward (get-in previous-match [:isearch :direction]))))))
 
 
