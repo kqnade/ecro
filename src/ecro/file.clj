@@ -11,7 +11,8 @@
     (java.nio.file.attribute
       AclFileAttributeView
       FileAttribute
-      PosixFileAttributeView)
+      PosixFileAttributeView
+      PosixFilePermissions)
     (java.util
       UUID)))
 
@@ -53,13 +54,24 @@
         (.setOwner target-view (.getOwner source-view))))))
 
 
+(defn- initial-temp-file-attributes
+  [target]
+  (if (Files/exists target (make-array LinkOption 0))
+    (if-let [attribute-view (posix-attribute-view target)]
+      (into-array FileAttribute
+                  [(PosixFilePermissions/asFileAttribute
+                     (.permissions (.readAttributes attribute-view)))])
+      (make-array FileAttribute 0))
+    (make-array FileAttribute 0)))
+
+
 (defn- create-save-temp-file
   [target]
   (Files/createFile (.resolve (.getParent target)
                               (str ".ecro-"
                                    (UUID/randomUUID)
                                    ".tmp"))
-                    (make-array FileAttribute 0)))
+                    (initial-temp-file-attributes target)))
 
 
 (defn- resolve-save-target

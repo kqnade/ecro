@@ -106,6 +106,31 @@
           (Files/deleteIfExists test-dir))))))
 
 
+(deftest test-write-file-creates-temp-with-existing-permissions
+  (testing "the temporary file is never created broader than the existing target"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_initial_permissions_"
+                                              (make-array FileAttribute 0))
+          test-file (.resolve test-dir "target.txt")
+          permissions (PosixFilePermissions/fromString "rw-------")
+          initial-temp-permissions (atom nil)
+          preserve-var (ns-resolve 'ecro.file 'preserve-posix-attributes)]
+      (try
+        (spit (.toFile test-file) "old content")
+        (Files/setPosixFilePermissions test-file permissions)
+        (with-redefs-fn {preserve-var
+                         (fn [_ temp-file]
+                           (reset! initial-temp-permissions
+                                   (Files/getPosixFilePermissions temp-file
+                                                                  (make-array LinkOption 0))))}
+          #(f/write-file {:name "target.txt"
+                          :text "new content"
+                          :filepath (str test-file)}))
+        (is (= permissions @initial-temp-permissions))
+        (finally
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
+
+
 (deftest test-write-file-preserves-existing-posix-ownership
   (testing "atomic replacement copies the existing POSIX owner and group"
     (let [test-dir (Files/createTempDirectory "ecro_atomic_save_ownership_"
@@ -115,7 +140,7 @@
                   (getName [_] "original-owner"))
           group (reify GroupPrincipal
                   (getName [_] "original-group"))
-          permissions #{}
+          permissions (PosixFilePermissions/fromString "rw-------")
           attributes (reify PosixFileAttributes
                        (owner [_] owner)
 
