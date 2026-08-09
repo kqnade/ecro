@@ -94,6 +94,11 @@
     (is (= "日  本" (render/screen-line "日\t本" 6 4)))))
 
 
+(deftest test-display-width-honors-emoji-presentation-selector
+  (testing "VS16 selects a two-cell emoji presentation"
+    (is (= 2 (render/display-width "❤️")))))
+
+
 (deftest test-status-line-shows-skk-mode
   (testing "status line shows SKK hiragana mode"
     (let [buf (-> (b/make-buffer "test")

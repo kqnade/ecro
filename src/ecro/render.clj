@@ -34,21 +34,35 @@
       (<= 0x20000 code-point 0x3fffd)))
 
 
+(defn- next-code-point
+  [^String text offset code-point]
+  (let [next-offset (+ offset (Character/charCount code-point))]
+    (when (< next-offset (count text))
+      (.codePointAt text next-offset))))
+
+
 (defn- code-point-width
-  [code-point]
-  (cond
-    (or (zero? code-point)
-        (< code-point 0x20)
-        (<= 0x7f code-point 0x9f)
-        (contains? zero-width-character-types (Character/getType code-point))
-        (Character/isEmojiModifier code-point))
-    0
+  [^String text offset code-point]
+  (let [next-point (next-code-point text offset code-point)]
+    (cond
+      (or (zero? code-point)
+          (< code-point 0x20)
+          (<= 0x7f code-point 0x9f)
+          (contains? zero-width-character-types (Character/getType code-point))
+          (Character/isEmojiModifier code-point))
+      0
 
-    (wide-code-point? code-point)
-    2
+      (and (Character/isEmoji code-point)
+           (= next-point 0xfe0e))
+      1
 
-    :else
-    1))
+      (or (wide-code-point? code-point)
+          (and (Character/isEmoji code-point)
+               (= next-point 0xfe0f)))
+      2
+
+      :else
+      1)))
 
 
 (defn- ansi-csi-end
@@ -83,7 +97,7 @@
         (recur ansi-end width)
         (let [code-point (.codePointAt text offset)]
           (recur (+ offset (Character/charCount code-point))
-                 (+ width (code-point-width code-point)))))
+                 (+ width (code-point-width text offset code-point)))))
       width)))
 
 
@@ -102,7 +116,7 @@
                    (sgr-active-after text offset ansi-end sgr-active?)))
           (let [code-point (.codePointAt text offset)
                 code-point-length (Character/charCount code-point)
-                next-width (+ current-width (code-point-width code-point))]
+                next-width (+ current-width (code-point-width text offset code-point))]
             (if (<= next-width width)
               (do
                 (.appendCodePoint result code-point)
@@ -147,7 +161,7 @@
               (do
                 (.appendCodePoint result code-point)
                 (recur (+ offset code-point-length)
-                       (+ col (code-point-width code-point)))))))
+                       (+ col (code-point-width line offset code-point)))))))
         (str result)))))
 
 
