@@ -104,6 +104,18 @@
       (is (= 1 (count (w/get-windows deleted)))))))
 
 
+(deftest test-delete-window-accepts-stale-handle
+  (testing "delete-window identifies its target by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          stale-target (first (w/get-windows split-frame))
+          edited-buffer (b/insert-char (:buffer stale-target) \a)
+          updated-frame (w/assoc-selected-buffer split-frame edited-buffer)
+          deleted-frame (w/delete-window updated-frame stale-target)]
+      (is (= 1 (count (w/get-windows deleted-frame)))))))
+
+
 (deftest test-delete-other-windows
   (testing "delete-other-windows keeps only the given window"
     (let [buf (b/make-buffer "test")
