@@ -91,6 +91,30 @@
       (is (= [] (:key-sequence single-window-state))))))
 
 
+(deftest test-handle-key-selects-other-window
+  (testing "ESC o selects the next window and synchronizes current buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          scratch-buffer (:current-buffer editor-state)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          [first-window second-window] (window/get-windows split-frame)
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          first-selected (state/select-window second-shows-other first-window)
+          selected-state (key/handle-key (assoc first-selected :key-sequence ["ESC"])
+                                         (int \o)
+                                         0)]
+      (is (= (:id scratch-buffer) (:id (:current-buffer first-selected))))
+      (is (= (:id other-buffer) (:id (:current-buffer selected-state))))
+      (is (= (:id other-buffer)
+             (:buffer-id (window/selected-window (:frame selected-state)))))
+      (is (= [] (:key-sequence selected-state))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
