@@ -80,6 +80,27 @@
           (Files/deleteIfExists test-dir))))))
 
 
+(deftest test-write-file-uses-normal-permissions-for-new-file
+  (testing "a new atomic-save target uses the normal file creation permissions"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_new_permissions_"
+                                              (make-array FileAttribute 0))
+          reference-file (.resolve test-dir "reference.txt")
+          test-file (.resolve test-dir "target.txt")]
+      (try
+        (spit (.toFile reference-file) "reference")
+        (f/write-file {:name "target.txt"
+                       :text "new content"
+                       :filepath (str test-file)})
+        (is (= (Files/getPosixFilePermissions reference-file
+                                              (make-array LinkOption 0))
+               (Files/getPosixFilePermissions test-file
+                                              (make-array LinkOption 0))))
+        (finally
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists reference-file)
+          (Files/deleteIfExists test-dir))))))
+
+
 (deftest test-write-file-cleans-up-after-replacement-failure
   (testing "a failed atomic replacement preserves the target and removes its temporary file"
     (let [test-dir (Files/createTempDirectory "ecro_atomic_save_failure_"

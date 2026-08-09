@@ -10,7 +10,9 @@
       StandardCopyOption)
     (java.nio.file.attribute
       FileAttribute
-      PosixFileAttributeView)))
+      PosixFileAttributeView)
+    (java.util
+      UUID)))
 
 
 (defn- preserve-posix-permissions
@@ -23,13 +25,21 @@
                                      (.permissions (.readAttributes attribute-view))))))
 
 
+(defn- create-save-temp-file
+  [target]
+  (Files/createFile (.resolve (.getParent target)
+                              (str "."
+                                   (.getFileName target)
+                                   "."
+                                   (UUID/randomUUID)
+                                   ".tmp"))
+                    (make-array FileAttribute 0)))
+
+
 (defn- atomic-spit
   [filepath text]
   (let [target (-> filepath io/file .toPath .toAbsolutePath)
-        temp-file (Files/createTempFile (.getParent target)
-                                        (str "." (.getFileName target) ".")
-                                        ".tmp"
-                                        (make-array FileAttribute 0))]
+        temp-file (create-save-temp-file target)]
     (try
       (preserve-posix-permissions target temp-file)
       (spit (.toFile temp-file) text)
