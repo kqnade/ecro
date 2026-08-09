@@ -9,6 +9,7 @@
       LinkOption
       StandardCopyOption)
     (java.nio.file.attribute
+      AclFileAttributeView
       FileAttribute
       PosixFileAttributeView)
     (java.util
@@ -27,6 +28,11 @@
   (file-attribute-view path PosixFileAttributeView))
 
 
+(defn- acl-attribute-view
+  [path]
+  (file-attribute-view path AclFileAttributeView))
+
+
 (defn- preserve-posix-attributes
   [source target]
   (when (Files/exists source (make-array LinkOption 0))
@@ -36,6 +42,15 @@
           (.setGroup target-view (.group attributes))
           (.setPermissions target-view (.permissions attributes))
           (.setOwner target-view (.owner attributes)))))))
+
+
+(defn- preserve-acl-attributes
+  [source target]
+  (when (Files/exists source (make-array LinkOption 0))
+    (when-let [source-view (acl-attribute-view source)]
+      (when-let [target-view (acl-attribute-view target)]
+        (.setAcl target-view (.getAcl source-view))
+        (.setOwner target-view (.getOwner source-view))))))
 
 
 (defn- create-save-temp-file
@@ -63,6 +78,7 @@
         temp-file (create-save-temp-file target)]
     (try
       (preserve-posix-attributes target temp-file)
+      (preserve-acl-attributes target temp-file)
       (spit (.toFile temp-file) text)
       (Files/move temp-file
                   target

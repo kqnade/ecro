@@ -10,6 +10,7 @@
       Files
       LinkOption)
     (java.nio.file.attribute
+      AclFileAttributeView
       FileAttribute
       GroupPrincipal
       PosixFileAttributeView
@@ -147,6 +148,45 @@
                           :filepath (str test-file)}))
         (is (= {:permissions permissions
                 :group group
+                :owner owner}
+               @copied-attributes))
+        (finally
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
+
+
+(deftest test-write-file-preserves-existing-acl
+  (testing "atomic replacement copies the existing ACL and owner when supported"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_acl_"
+                                              (make-array FileAttribute 0))
+          test-file (.resolve test-dir "target.txt")
+          owner (reify java.nio.file.attribute.UserPrincipal
+                  (getName [_] "original-owner"))
+          acl (java.util.ArrayList.)
+          copied-attributes (atom {})
+          source-view (reify AclFileAttributeView
+                        (getOwner [_] owner)
+
+                        (getAcl [_] acl))
+          target-view (reify AclFileAttributeView
+                        (setAcl
+                          [_ value]
+                          (swap! copied-attributes assoc :acl value))
+
+                        (setOwner
+                          [_ value]
+                          (swap! copied-attributes assoc :owner value)))
+          attribute-view-var (ns-resolve 'ecro.file 'file-attribute-view)]
+      (try
+        (spit (.toFile test-file) "old content")
+        (with-redefs-fn {attribute-view-var
+                         (fn [path attribute-view-class]
+                           (when (= AclFileAttributeView attribute-view-class)
+                             (if (= test-file path) source-view target-view)))}
+          #(f/write-file {:name "target.txt"
+                          :text "new content"
+                          :filepath (str test-file)}))
+        (is (= {:acl acl
                 :owner owner}
                @copied-attributes))
         (finally
