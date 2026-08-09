@@ -10,7 +10,7 @@
   (testing "initial state displays the scratch buffer in its selected window"
     (let [editor-state (state/initial-state {})
           selected-window (window/selected-window (:frame editor-state))]
-      (is (= (:current-buffer editor-state) (:buffer selected-window))))))
+      (is (= (:id (:current-buffer editor-state)) (:buffer-id selected-window))))))
 
 
 (deftest test-add-buffer-to-list
@@ -111,20 +111,47 @@
           current-buffer (:current-buffer editor-state)
           edited-state (state/assoc-current-buffer editor-state
                                                    (b/insert-char current-buffer \a))]
-      (is (= (:current-buffer edited-state)
-             (:buffer (window/selected-window (:frame edited-state))))))))
+      (is (= (:id (:current-buffer edited-state))
+             (:buffer-id (window/selected-window (:frame edited-state))))))))
 
 
 (deftest test-select-window-updates-current-buffer
   (testing "selecting a window updates current buffer and buffer list"
     (let [editor-state (state/initial-state {})
+          other-buffer (b/make-buffer "other.txt")
           frame (:frame editor-state)
           split-frame (window/split-window-vertical frame (:root-window frame))
-          target-window (second (window/get-windows split-frame))
+          [first-window second-window] (window/get-windows split-frame)
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          first-selected (state/select-window second-shows-other first-window)
+          current-second-window (second (window/get-windows (:frame first-selected)))
+          selected-state (state/select-window first-selected current-second-window)]
+      (is (= (:id other-buffer) (:id (:current-buffer selected-state))))
+      (is (= (:id (:current-buffer selected-state))
+             (:buffer-id (window/selected-window (:frame selected-state)))))
+      (is (some #(= (:id other-buffer) (:id %)) (:buffers selected-state))))))
+
+
+(deftest test-selecting-another-window-showing-same-buffer-preserves-edits
+  (testing "selecting another window showing the current buffer does not restore a stale snapshot"
+    (let [editor-state (state/initial-state {})
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          [first-window second-window] (window/get-windows split-frame)
           state-with-split (assoc editor-state :frame split-frame)
-          selected-state (state/select-window state-with-split target-window)]
-      (is (= (:buffer target-window) (:current-buffer selected-state)))
-      (is (= (:current-buffer selected-state)
-             (:buffer (window/selected-window (:frame selected-state)))))
-      (is (some #(= (:name (:buffer target-window)) (:name %))
-                (:buffers selected-state))))))
+          second-selected (state/select-window state-with-split second-window)
+          both-show-scratch (state/switch-to-buffer second-selected "*scratch*")
+          first-selected (state/select-window both-show-scratch first-window)
+          edited-state (state/assoc-current-buffer
+                         first-selected
+                         (b/insert-char (:current-buffer first-selected) \a))
+          current-second-window (second (window/get-windows (:frame edited-state)))
+          reselected-state (state/select-window edited-state current-second-window)
+          scratch-buffer (first (filter #(= "*scratch*" (:name %))
+                                        (:buffers reselected-state)))]
+      (is (= "a" (:text (:current-buffer reselected-state))))
+      (is (= "a" (:text scratch-buffer))))))

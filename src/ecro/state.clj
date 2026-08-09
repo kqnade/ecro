@@ -30,6 +30,18 @@
   (update state :buffers conj buf))
 
 
+(defn- same-buffer?
+  [buffer-a buffer-b]
+  (if (and (:id buffer-a) (:id buffer-b))
+    (= (:id buffer-a) (:id buffer-b))
+    (= (:name buffer-a) (:name buffer-b))))
+
+
+(defn- buffer-by-id
+  [state buffer-id]
+  (first (filter #(= buffer-id (:id %)) (:buffers state))))
+
+
 (defn assoc-current-buffer
   "Set current buffer and keep the buffer list entry synchronized."
   [state buf]
@@ -37,8 +49,8 @@
     (cond-> (if-not (contains? state :buffers)
               state'
               (let [bufs (:buffers state)
-                    exists? (some #(= (:name %) (:name buf)) bufs)
-                    updated-bufs (mapv #(if (= (:name %) (:name buf)) buf %) bufs)]
+                    exists? (some #(same-buffer? % buf) bufs)
+                    updated-bufs (mapv #(if (same-buffer? % buf) buf %) bufs)]
                 (assoc state' :buffers (if exists?
                                          updated-bufs
                                          (conj updated-bufs buf)))))
@@ -49,10 +61,12 @@
   "Select a frame window and synchronize its buffer with editor state."
   [state target-window]
   (let [frame (window/select-window (:frame state) target-window)
-        selected-window (window/selected-window frame)]
+        selected-window (window/selected-window frame)
+        selected-buffer (buffer-by-id state (:buffer-id selected-window))]
     (if (and (:id target-window)
-             (= (:id target-window) (:id selected-window)))
-      (assoc-current-buffer (assoc state :frame frame) (:buffer selected-window))
+             (= (:id target-window) (:id selected-window))
+             selected-buffer)
+      (assoc-current-buffer (assoc state :frame frame) selected-buffer)
       state)))
 
 

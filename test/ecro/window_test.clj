@@ -9,7 +9,7 @@
   (testing "window creation with buffer"
     (let [buf (b/make-buffer "test")
           win (w/make-window buf)]
-      (is (= buf (:buffer win)))
+      (is (= (:id buf) (:buffer-id win)))
       (is (= 0 (:top win)))
       (is (= 0 (:left win)))
       (is (= 24 (:height win)))
@@ -42,10 +42,8 @@
   (testing "vertical split identifies its target by stable window ID"
     (let [buf (b/make-buffer "test")
           frame (w/make-frame (w/make-window buf 80 24))
-          stale-window (:root-window frame)
-          edited-buffer (b/insert-char (:buffer stale-window) \a)
-          updated-frame (w/assoc-selected-buffer frame edited-buffer)
-          split-frame (w/split-window-vertical updated-frame stale-window)]
+          stale-window (assoc (:root-window frame) :top 99)
+          split-frame (w/split-window-vertical frame stale-window)]
       (is (= 2 (count (w/get-windows split-frame)))))))
 
 
@@ -64,10 +62,8 @@
   (testing "horizontal split identifies its target by stable window ID"
     (let [buf (b/make-buffer "test")
           frame (w/make-frame (w/make-window buf 80 24))
-          stale-window (:root-window frame)
-          edited-buffer (b/insert-char (:buffer stale-window) \a)
-          updated-frame (w/assoc-selected-buffer frame edited-buffer)
-          split-frame (w/split-window-horizontal updated-frame stale-window)]
+          stale-window (assoc (:root-window frame) :top 99)
+          split-frame (w/split-window-horizontal frame stale-window)]
       (is (= 2 (count (w/get-windows split-frame)))))))
 
 
@@ -101,12 +97,10 @@
     (let [buf (b/make-buffer "test")
           frame (w/make-frame (w/make-window buf 80 24))
           split-frame (w/split-window-vertical frame (:root-window frame))
-          stale-window (first (w/get-windows split-frame))
-          edited-buffer (b/insert-char (:buffer stale-window) \a)
-          updated-frame (w/assoc-selected-buffer split-frame edited-buffer)
-          expected-window (second (w/get-windows updated-frame))]
+          stale-window (assoc (first (w/get-windows split-frame)) :top 99)
+          expected-window (second (w/get-windows split-frame))]
       (is (= (:id expected-window)
-             (:id (w/next-window updated-frame stale-window)))))))
+             (:id (w/next-window split-frame stale-window)))))))
 
 
 (deftest test-prev-window-accepts-stale-handle
@@ -114,13 +108,10 @@
     (let [buf (b/make-buffer "test")
           frame (w/make-frame (w/make-window buf 80 24))
           split-frame (w/split-window-vertical frame (:root-window frame))
-          stale-window (second (w/get-windows split-frame))
-          selected-frame (w/select-window split-frame stale-window)
-          edited-buffer (b/insert-char (:buffer stale-window) \a)
-          updated-frame (w/assoc-selected-buffer selected-frame edited-buffer)
-          expected-window (first (w/get-windows updated-frame))]
+          stale-window (assoc (second (w/get-windows split-frame)) :top 99)
+          expected-window (first (w/get-windows split-frame))]
       (is (= (:id expected-window)
-             (:id (w/prev-window updated-frame stale-window)))))))
+             (:id (w/prev-window split-frame stale-window)))))))
 
 
 (deftest test-select-window
@@ -139,8 +130,8 @@
           buf2 (b/make-buffer "buffer2")
           win1 (w/make-window buf1)
           win2 (w/make-window buf2)]
-      (is (= "buffer1" (:name (:buffer win1))))
-      (is (= "buffer2" (:name (:buffer win2)))))))
+      (is (= (:id buf1) (:buffer-id win1)))
+      (is (= (:id buf2) (:buffer-id win2))))))
 
 
 (deftest test-delete-window
@@ -158,10 +149,8 @@
     (let [buf (b/make-buffer "test")
           frame (w/make-frame (w/make-window buf 80 24))
           split-frame (w/split-window-vertical frame (:root-window frame))
-          stale-target (first (w/get-windows split-frame))
-          edited-buffer (b/insert-char (:buffer stale-target) \a)
-          updated-frame (w/assoc-selected-buffer split-frame edited-buffer)
-          deleted-frame (w/delete-window updated-frame stale-target)]
+          stale-target (assoc (first (w/get-windows split-frame)) :top 99)
+          deleted-frame (w/delete-window split-frame stale-target)]
       (is (= 1 (count (w/get-windows deleted-frame)))))))
 
 
@@ -173,7 +162,7 @@
           wins (w/get-windows split-frame)
           kept (w/delete-other-windows split-frame (second wins))]
       (is (= 1 (count (w/get-windows kept))))
-      (is (= "*new*" (-> kept :root-window :buffer :name)))
+      (is (= (:id buf) (-> kept :root-window :buffer-id)))
       (is (= 80 (-> kept :root-window :width)))
       (is (= 24 (-> kept :root-window :height)))
       (is (nil? (-> kept :root-window :parent))))))

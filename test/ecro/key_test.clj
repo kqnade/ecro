@@ -114,5 +114,5 @@
           processed-state (with-redefs [native/get-terminal-size (constantly [80 6])]
                             (key/process-event state-with-point nil))]
       (is (= 3 (:scroll-line (:current-buffer processed-state))))
-      (is (= (:current-buffer processed-state)
-             (:buffer (window/selected-window (:frame processed-state))))))))
+      (is (= (:id (:current-buffer processed-state))
+             (:buffer-id (window/selected-window (:frame processed-state))))))))

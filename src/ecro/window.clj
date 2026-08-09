@@ -1,7 +1,18 @@
 (ns ecro.window
   (:require
-    [ecro.buffer :as b]
     [ecro.window-tree :as wt]))
+
+
+(defn- make-window-with-buffer-id
+  [buffer-id width height]
+  {:type :window
+   :id (random-uuid)
+   :buffer-id buffer-id
+   :top 0
+   :left 0
+   :width width
+   :height height
+   :parent nil})
 
 
 (defn make-window
@@ -9,14 +20,7 @@
   ([buf]
    (make-window buf 80 24))
   ([buf width height]
-   {:type :window
-    :id (random-uuid)
-    :buffer buf
-    :top 0
-    :left 0
-    :width width
-    :height height
-    :parent nil}))
+   (make-window-with-buffer-id (:id buf) width height)))
 
 
 (defn- make-container
@@ -59,7 +63,7 @@
 (defn assoc-selected-buffer
   "Set the buffer displayed by the selected window."
   [frame buf]
-  (update frame :root-window wt/update-window (:selected-window-id frame) #(assoc % :buffer buf)))
+  (update frame :root-window wt/update-window (:selected-window-id frame) #(assoc % :buffer-id (:id buf))))
 
 
 (defn- update-window-positions
@@ -86,8 +90,10 @@
   (let [root-window (:root-window frame)]
     (if (wt/same-window? window root-window)
       (let [new-width (/ (:width root-window) 2)
-            buf (b/make-buffer "*new*")
-            new-window (assoc (make-window buf new-width (:height root-window)) :parent root-window)
+            new-window (assoc (make-window-with-buffer-id (:buffer-id root-window)
+                                                          new-width
+                                                          (:height root-window))
+                              :parent root-window)
             updated-window (assoc root-window :width new-width)
             container (make-container :vertical
                                       [updated-window new-window]
@@ -103,8 +109,10 @@
   (let [root-window (:root-window frame)]
     (if (wt/same-window? window root-window)
       (let [new-height (/ (:height root-window) 2)
-            buf (b/make-buffer "*new*")
-            new-window (assoc (make-window buf (:width root-window) new-height) :parent root-window)
+            new-window (assoc (make-window-with-buffer-id (:buffer-id root-window)
+                                                          (:width root-window)
+                                                          new-height)
+                              :parent root-window)
             updated-window (assoc root-window :height new-height)
             container (make-container :horizontal
                                       [updated-window new-window]

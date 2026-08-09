@@ -33,8 +33,8 @@
       (is (contains? state :key-sequence))
       (is (contains? state :keymap))
       (is (contains? state :current-buffer))
-      (is (= (:current-buffer state)
-             (:buffer (window/selected-window (:frame state))))))))
+      (is (= (:id (:current-buffer state))
+             (:buffer-id (window/selected-window (:frame state))))))))
 
 
 (deftest test-kill-line-integration
