@@ -41,6 +41,12 @@
       (is (not (str/includes? rendered "\033[7m"))))))
 
 
+(deftest test-render-line-with-region-fits-visible-width
+  (testing "ANSI region highlighting does not consume terminal cells"
+    (is (= "\033[7mhello\033[0m world"
+           (#'render/render-line-with-region "hello world" 0 [0 5] 11 2)))))
+
+
 (deftest test-render-screen-buffer-keeps-region-state
   (testing "screen-buffer stores highlighted lines so clearing mark redraws them"
     (let [marked-buf (assoc (b/make-buffer "test")

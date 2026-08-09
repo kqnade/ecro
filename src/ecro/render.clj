@@ -51,15 +51,39 @@
     1))
 
 
+(defn- ansi-csi-end
+  [^String text offset]
+  (when (and (< (inc offset) (count text))
+             (= 0x1b (int (.charAt text offset)))
+             (= \[ (.charAt text (inc offset))))
+    (loop [index (+ offset 2)]
+      (when (< index (count text))
+        (let [ch (int (.charAt text index))]
+          (if (<= 0x40 ch 0x7e)
+            (inc index)
+            (recur (inc index))))))))
+
+
+(defn- sgr-active-after
+  [^String text offset end active?]
+  (if (= \m (.charAt text (dec end)))
+    (let [sequence (subs text offset end)]
+      (not (or (= sequence "\033[m")
+               (= sequence "\033[0m"))))
+    active?))
+
+
 (defn display-width
   "Return the number of terminal cells occupied by text."
   [^String text]
   (loop [offset 0
          width 0]
     (if (< offset (count text))
-      (let [code-point (.codePointAt text offset)]
-        (recur (+ offset (Character/charCount code-point))
-               (+ width (code-point-width code-point))))
+      (if-let [ansi-end (ansi-csi-end text offset)]
+        (recur ansi-end width)
+        (let [code-point (.codePointAt text offset)]
+          (recur (+ offset (Character/charCount code-point))
+                 (+ width (code-point-width code-point)))))
       width)))
 
 
@@ -67,16 +91,26 @@
   [^String text width]
   (let [result (StringBuilder.)]
     (loop [offset 0
-           current-width 0]
+           current-width 0
+           sgr-active? false]
       (if (< offset (count text))
-        (let [code-point (.codePointAt text offset)
-              code-point-length (Character/charCount code-point)
-              next-width (+ current-width (code-point-width code-point))]
-          (if (<= next-width width)
-            (do
-              (.appendCodePoint result code-point)
-              (recur (+ offset code-point-length) next-width))
-            (str result)))
+        (if-let [ansi-end (ansi-csi-end text offset)]
+          (do
+            (.append result (subs text offset ansi-end))
+            (recur ansi-end
+                   current-width
+                   (sgr-active-after text offset ansi-end sgr-active?)))
+          (let [code-point (.codePointAt text offset)
+                code-point-length (Character/charCount code-point)
+                next-width (+ current-width (code-point-width code-point))]
+            (if (<= next-width width)
+              (do
+                (.appendCodePoint result code-point)
+                (recur (+ offset code-point-length) next-width sgr-active?))
+              (do
+                (when sgr-active?
+                  (.append result "\033[0m"))
+                (str result)))))
         (str result)))))
 
 
@@ -100,16 +134,20 @@
     (loop [offset 0
            col 0]
       (if (< offset (count line))
-        (let [code-point (.codePointAt line offset)
-              code-point-length (Character/charCount code-point)]
-          (if (= code-point (int \tab))
-            (let [spaces (- tab-width (mod col tab-width))]
-              (.append result (apply str (repeat spaces " ")))
-              (recur (+ offset code-point-length) (+ col spaces)))
-            (do
-              (.appendCodePoint result code-point)
-              (recur (+ offset code-point-length)
-                     (+ col (code-point-width code-point))))))
+        (if-let [ansi-end (ansi-csi-end line offset)]
+          (do
+            (.append result (subs line offset ansi-end))
+            (recur ansi-end col))
+          (let [code-point (.codePointAt line offset)
+                code-point-length (Character/charCount code-point)]
+            (if (= code-point (int \tab))
+              (let [spaces (- tab-width (mod col tab-width))]
+                (.append result (apply str (repeat spaces " ")))
+                (recur (+ offset code-point-length) (+ col spaces)))
+              (do
+                (.appendCodePoint result code-point)
+                (recur (+ offset code-point-length)
+                       (+ col (code-point-width code-point)))))))
         (str result)))))
 
 
@@ -171,9 +209,8 @@
           before (subs line 0 rel-start)
           inside (subs line rel-start rel-end)
           after (subs line rel-end)
-          rendered (str before "\033[7m" inside "\033[0m" after)
-          expanded (expand-tabs rendered tab-width)]
-      (subs (format (str "%-" width "s") expanded) 0 width))
+          rendered (str before "\033[7m" inside "\033[0m" after)]
+      (screen-line rendered width tab-width))
     (screen-line line width tab-width)))
 
 
