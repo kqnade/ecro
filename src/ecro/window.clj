@@ -66,6 +66,15 @@
   (update frame :root-window wt/update-window (:selected-window-id frame) #(assoc % :buffer-id (:id buf))))
 
 
+(defn replace-buffer
+  "Replace a buffer reference in every window that displays it."
+  [frame old-buffer new-buffer]
+  (update frame :root-window wt/map-windows
+          #(if (= (:id old-buffer) (:buffer-id %))
+             (assoc % :buffer-id (:id new-buffer))
+             %)))
+
+
 (defn- update-window-positions
   "Update positions of all windows in a tree."
   [window top left]

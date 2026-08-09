@@ -29,6 +29,16 @@
                                   %))))
 
 
+(defn map-windows
+  "Apply f to every leaf in a window tree."
+  [tree f]
+  (if (= :window (:type tree))
+    (f tree)
+    (update tree :children #(mapv (fn [child]
+                                    (map-windows child f))
+                                  %))))
+
+
 (defn remove-window
   "Remove a leaf window from a window tree. Returns the remaining tree,
    or nil if the last window is removed."

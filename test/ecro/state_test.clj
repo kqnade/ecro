@@ -65,6 +65,28 @@
       (is (= "Can't kill last buffer" (:message new-state))))))
 
 
+(deftest test-kill-buffer-reassigns-windows-showing-it
+  (testing "killing a buffer reassigns every window that displays it"
+    (let [editor-state (state/initial-state {})
+          scratch-buffer (:current-buffer editor-state)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          second-window (second (window/get-windows split-frame))
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          killed-state (state/kill-buffer second-shows-other (:name scratch-buffer))
+          windows-after-kill (window/get-windows (:frame killed-state))
+          first-window-after-kill (first windows-after-kill)
+          reselected-state (state/select-window killed-state first-window-after-kill)]
+      (is (every? #(= (:id other-buffer) (:buffer-id %)) windows-after-kill))
+      (is (= (:id other-buffer) (:id (:current-buffer reselected-state))))
+      (is (not-any? #(= (:id scratch-buffer) (:id %)) (:buffers reselected-state))))))
+
+
 (deftest test-list-buffers
   (testing "list-buffers creates a *Buffer List* buffer with names"
     (let [buf1 (b/make-buffer "*scratch*")

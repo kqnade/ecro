@@ -82,13 +82,20 @@
 (defn kill-buffer
   "Kill buffer by name. Switches to another buffer if killing current."
   [state name]
-  (let [bufs (filterv #(not= (:name %) name) (:buffers state))]
-    (if (empty? bufs)
-      (assoc state :message "Can't kill last buffer")
-      (let [current-name (:name (:current-buffer state))]
-        (cond-> (assoc state :buffers bufs)
-          (= current-name name)
-          (assoc-current-buffer (first bufs)))))))
+  (if-let [killed-buffer (first (filter #(= (:name %) name) (:buffers state)))]
+    (let [bufs (filterv #(not (same-buffer? % killed-buffer)) (:buffers state))]
+      (if (empty? bufs)
+        (assoc state :message "Can't kill last buffer")
+        (let [current-buffer (:current-buffer state)
+              replacement-buffer (or (first (filter #(same-buffer? % current-buffer) bufs))
+                                     (first bufs))
+              updated-state (cond-> (assoc state :buffers bufs)
+                              (:frame state)
+                              (update :frame window/replace-buffer killed-buffer replacement-buffer))]
+          (if (same-buffer? current-buffer killed-buffer)
+            (assoc-current-buffer updated-state replacement-buffer)
+            updated-state))))
+    state))
 
 
 (defn get-buffer-names
