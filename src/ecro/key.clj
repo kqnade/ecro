@@ -17,6 +17,22 @@
 (def shift-modifier 4)
 
 
+(defn- function-key-code?
+  [key-code]
+  (<= 2000 key-code 2255))
+
+
+(defn- printable-key-code?
+  [key-code]
+  (and (Character/isValidCodePoint key-code)
+       (not (Character/isISOControl key-code))))
+
+
+(defn- key-code->string
+  [key-code]
+  (String. (Character/toChars key-code)))
+
+
 (defn shifted?
   [modifiers]
   (pos? (bit-and modifiers shift-modifier)))
@@ -188,7 +204,7 @@
     (= key-code 1010)
     (state/assoc-current-buffer editor-state (buffer/delete-char-forward (:current-buffer editor-state)))
 
-    (>= key-code 2000)
+    (function-key-code? key-code)
     editor-state
 
     :else
@@ -201,9 +217,10 @@
 
         (nil? result)
         (if (and (empty? (:key-sequence editor-state))
-                 (>= key-code 32)
-                 (< key-code 127))
-          (state/assoc-current-buffer editor-state (buffer/insert-char (:current-buffer editor-state) (char key-code)))
+                 (printable-key-code? key-code))
+          (state/assoc-current-buffer editor-state
+                                      (buffer/insert-text (:current-buffer editor-state)
+                                                          (key-code->string key-code)))
           (assoc editor-state :key-sequence []))
 
         :else

@@ -45,6 +45,16 @@
       (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
 
 
+(deftest test-handle-key-inserts-non-ascii-character
+  (testing "a printable Unicode key inserts its character"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          new-state (key/handle-key state (int \日) 0)]
+      (is (= "日" (get-in new-state [:current-buffer :text])))
+      (is (= 1 (get-in new-state [:current-buffer :point]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
