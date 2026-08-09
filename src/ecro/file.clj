@@ -22,13 +22,15 @@
                               (make-array LinkOption 0)))
 
 
-(defn- preserve-posix-permissions
+(defn- preserve-posix-attributes
   [source target]
   (when (Files/exists source (make-array LinkOption 0))
     (when-let [source-view (posix-attribute-view source)]
       (when-let [target-view (posix-attribute-view target)]
-        (.setPermissions target-view
-                         (.permissions (.readAttributes source-view)))))))
+        (let [attributes (.readAttributes source-view)]
+          (.setGroup target-view (.group attributes))
+          (.setPermissions target-view (.permissions attributes))
+          (.setOwner target-view (.owner attributes)))))))
 
 
 (defn- create-save-temp-file
@@ -55,7 +57,7 @@
   (let [target (resolve-save-target filepath)
         temp-file (create-save-temp-file target)]
     (try
-      (preserve-posix-permissions target temp-file)
+      (preserve-posix-attributes target temp-file)
       (spit (.toFile temp-file) text)
       (Files/move temp-file
                   target

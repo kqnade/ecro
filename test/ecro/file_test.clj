@@ -11,6 +11,9 @@
       LinkOption)
     (java.nio.file.attribute
       FileAttribute
+      GroupPrincipal
+      PosixFileAttributeView
+      PosixFileAttributes
       PosixFilePermissions)))
 
 
@@ -97,6 +100,55 @@
         (is (= permissions
                (Files/getPosixFilePermissions test-file
                                               (make-array LinkOption 0))))
+        (finally
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
+
+
+(deftest test-write-file-preserves-existing-posix-ownership
+  (testing "atomic replacement copies the existing POSIX owner and group"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_ownership_"
+                                              (make-array FileAttribute 0))
+          test-file (.resolve test-dir "target.txt")
+          owner (reify java.nio.file.attribute.UserPrincipal
+                  (getName [_] "original-owner"))
+          group (reify GroupPrincipal
+                  (getName [_] "original-group"))
+          permissions #{}
+          attributes (reify PosixFileAttributes
+                       (owner [_] owner)
+
+                       (group [_] group)
+
+                       (permissions [_] permissions))
+          copied-attributes (atom {})
+          source-view (reify PosixFileAttributeView
+                        (readAttributes [_] attributes))
+          target-view (reify PosixFileAttributeView
+                        (setPermissions
+                          [_ value]
+                          (swap! copied-attributes assoc :permissions value))
+
+                        (setGroup
+                          [_ value]
+                          (swap! copied-attributes assoc :group value))
+
+                        (setOwner
+                          [_ value]
+                          (swap! copied-attributes assoc :owner value)))
+          attribute-view-var (ns-resolve 'ecro.file 'posix-attribute-view)]
+      (try
+        (spit (.toFile test-file) "old content")
+        (with-redefs-fn {attribute-view-var
+                         (fn [path]
+                           (if (= test-file path) source-view target-view))}
+          #(f/write-file {:name "target.txt"
+                          :text "new content"
+                          :filepath (str test-file)}))
+        (is (= {:permissions permissions
+                :group group
+                :owner owner}
+               @copied-attributes))
         (finally
           (Files/deleteIfExists test-file)
           (Files/deleteIfExists test-dir))))))
