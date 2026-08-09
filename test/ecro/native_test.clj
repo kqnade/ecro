@@ -10,6 +10,21 @@
     (catch Exception _ false)))
 
 
+(def resource-patterns
+  (->> (slurp "resources/META-INF/native-image/resource-config.json")
+       (re-seq #"\"pattern\"\s*:\s*\"([^\"]+)\"")
+       (map (comp re-pattern second))))
+
+
+(deftest jna-dispatch-libraries-are-included-in-native-image
+  (testing "JNA dispatch libraries for release platforms match an included resource pattern"
+    (doseq [resource ["com/sun/jna/linux-x86-64/libjnidispatch.so"
+                      "com/sun/jna/darwin-x86-64/libjnidispatch.jnilib"
+                      "com/sun/jna/darwin-aarch64/libjnidispatch.jnilib"]]
+      (is (some #(re-matches % resource) resource-patterns)
+          (str resource " is not included by resource-config.json")))))
+
+
 (deftest test-jna-library-loaded
   (testing "JNA library is loaded or gracefully handles missing library"
     (is lib-available?)))

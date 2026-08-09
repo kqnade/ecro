@@ -3,6 +3,9 @@
     "includes": [
       {
         "pattern": "META-INF/native-image/.*"
+      },
+      {
+        "pattern": "com/sun/jna/.*"
       }
     ]
   }
