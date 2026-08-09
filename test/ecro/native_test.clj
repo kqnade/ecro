@@ -1,5 +1,8 @@
 (ns ecro.native-test
   (:require
+    [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [clojure.string :as str]
     [clojure.test :refer :all]
     [ecro.native :as native]))
 
@@ -10,8 +13,162 @@
     (catch Exception _ false)))
 
 
+(def resource-patterns
+  (->> (slurp "resources/META-INF/native-image/resource-config.json")
+       (re-seq #"\"pattern\"\s*:\s*\"([^\"]+)\"")
+       (map (comp re-pattern second))))
+
+
+(def jni-config
+  (slurp "resources/META-INF/native-image/jni-config.json"))
+
+
+(deftest jna-dispatch-libraries-are-included-in-native-image
+  (testing "JNA dispatch libraries for release platforms match an included resource pattern"
+    (doseq [resource ["com/sun/jna/linux-x86-64/libjnidispatch.so"
+                      "com/sun/jna/darwin-x86-64/libjnidispatch.jnilib"
+                      "com/sun/jna/darwin-aarch64/libjnidispatch.jnilib"]]
+      (is (some #(re-matches % resource) resource-patterns)
+          (str resource " is not included by resource-config.json")))))
+
+
+(deftest jna-core-types-are-registered-for-jni
+  (testing "JNA can resolve the Java and JNA types used by its native dispatcher"
+    (doseq [class-name ["com.sun.jna.Native"
+                        "com.sun.jna.Pointer"
+                        "com.sun.jna.Structure"
+                        "java.lang.Object"]]
+      (is (re-find (re-pattern (str "\\\"name\\\"\\s*:\\s*\\\""
+                                    (java.util.regex.Pattern/quote class-name)
+                                    "\\\""))
+                   jni-config)
+          (str class-name " is not registered in jni-config.json")))))
+
+
+(deftest ecro-native-interface-proxy-is-registered
+  (testing "JNA can create the native interface proxy in the native image"
+    (let [metadata-file (java.io.File.
+                          "resources/META-INF/native-image/reachability-metadata.json")]
+      (is (.exists metadata-file)
+          "reachability-metadata.json does not exist")
+      (when (.exists metadata-file)
+        (let [metadata (slurp metadata-file)]
+          (is (re-find #"ecro\.native\.IEcroNative" metadata)
+              "IEcroNative proxy is not registered")
+          (doseq [method-name ["ecro_disable_raw_mode"
+                               "ecro_enable_raw_mode"
+                               "ecro_enter_alternate_screen"
+                               "ecro_free_event"
+                               "ecro_get_terminal_size"
+                               "ecro_init"
+                               "ecro_leave_alternate_screen"
+                               "ecro_poll_event"
+                               "ecro_read_event"
+                               "ecro_shutdown"]]
+            (is (re-find (re-pattern (str "\\\"name\\\"\\s*:\\s*\\\""
+                                          method-name
+                                          "\\\""))
+                         metadata)
+                (str method-name " is not registered for reflection"))))))))
+
+
+(deftest native-package-contains-executable-and-rust-library
+  (testing "the release archive puts the executable and Rust library together"
+    (let [temp-dir (.toFile
+                     (java.nio.file.Files/createTempDirectory
+                       "ecro-native-package-test"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+          binary (io/file temp-dir "built-ecro")
+          library (io/file temp-dir "libecro_core.so")
+          archive (io/file temp-dir "ecro-test.tar.gz")]
+      (try
+        (spit binary "native executable")
+        (spit library "Rust shared library")
+        (let [{:keys [exit err]}
+              (shell/sh "bash" "script/package-native.sh" (.getPath archive)
+                        :env {"ECRO_BINARY_PATH" (.getPath binary)
+                              "ECRO_LIBRARY_PATH" (.getPath library)})]
+          (is (zero? exit) err)
+          (is (.isFile archive) "native archive was not created")
+          (when (.isFile archive)
+            (let [{tar-exit :exit tar-output :out tar-error :err}
+                  (shell/sh "tar" "-tzf" (.getPath archive))]
+              (is (zero? tar-exit) tar-error)
+              (is (= #{"ecro" "libecro_core.so"}
+                     (set (str/split-lines tar-output)))))))
+        (finally
+          (doseq [file [archive library binary]]
+            (io/delete-file file true))
+          (io/delete-file temp-dir true))))))
+
+
+(deftest native-library-next-to-executable-is-preferred
+  (testing "a distributed executable resolves its colocated Rust library"
+    (let [temp-dir (.toFile
+                     (java.nio.file.Files/createTempDirectory
+                       "ecro-native-library-test"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+          executable (io/file temp-dir "ecro")
+          library (io/file temp-dir (System/mapLibraryName "ecro_core"))
+          resolver (ns-resolve 'ecro.native 'sibling-library-path)]
+      (try
+        (spit executable "native executable")
+        (spit library "Rust shared library")
+        (is (some? resolver) "sibling-library-path is not implemented")
+        (when resolver
+          (is (= (.getAbsolutePath library)
+                 (resolver (.getAbsolutePath executable)))))
+        (finally
+          (doseq [file [library executable]]
+            (io/delete-file file true))
+          (io/delete-file temp-dir true))))))
+
+
+(deftest missing-rust-library-is-an-explicit-hard-failure
+  (testing "a missing Rust sidecar reports an actionable hard failure"
+    (let [loader (ns-resolve 'ecro.native 'load-native-library)
+          missing-library (io/file
+                            (System/getProperty "java.io.tmpdir")
+                            (str "missing-ecro-core-"
+                                 (System/nanoTime)
+                                 ".so"))]
+      (is (some? loader) "load-native-library is not implemented")
+      (when loader
+        (let [error (try
+                      (loader (.getAbsolutePath missing-library))
+                      nil
+                      (catch IllegalStateException caught
+                        caught))]
+          (is (some? error) "missing sidecar did not fail")
+          (when error
+            (is (re-find #"Required Rust sidecar could not be loaded"
+                         (.getMessage error)))
+            (is (instance? LinkageError (.getCause error)))))))))
+
+
+(deftest release-workflow-packages-native-distribution
+  (testing "the release workflow uses the verified native packaging script"
+    (is (re-find #"\./script/package-native\.sh"
+                 (slurp ".github/workflows/release.yml")))))
+
+
+(deftest pr-ci-smoke-tests-native-distributions-on-linux-and-macos
+  (testing "PR CI builds, packages, extracts, and smoke-tests both release platforms"
+    (let [workflow (slurp ".github/workflows/ci.yml")]
+      (is (re-find #"(?s)native-image:.*?matrix:.*?os: \[ubuntu-latest, macos-latest\]"
+                   workflow)
+          "native-image CI does not use the release OS matrix")
+      (is (not (re-find #"github\.ref == 'refs/heads/main'" workflow))
+          "native-image CI is still skipped on pull requests")
+      (doseq [command ["./script/package-native.sh"
+                       "tar -xzf"
+                       "--smoke-test"]]
+        (is (str/includes? workflow command)
+            (str command " is missing from native-image CI"))))))
+
+
 (deftest test-jna-library-loaded
-  (testing "JNA library is loaded or gracefully handles missing library"
+  (testing "JNA library is loaded from the Rust build output"
     (is lib-available?)))
 
 

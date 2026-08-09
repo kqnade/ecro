@@ -1,0 +1,58 @@
+{
+  "reflection": [
+    {
+      "type": {
+        "proxy": [
+          "ecro.native.IEcroNative"
+        ]
+      },
+      "methods": [
+        {
+          "name": "ecro_disable_raw_mode",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_enable_raw_mode",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_enter_alternate_screen",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_free_event",
+          "parameterTypes": [
+            "com.sun.jna.Pointer"
+          ]
+        },
+        {
+          "name": "ecro_get_terminal_size",
+          "parameterTypes": [
+            "int[]",
+            "int[]"
+          ]
+        },
+        {
+          "name": "ecro_init",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_leave_alternate_screen",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_poll_event",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_read_event",
+          "parameterTypes": []
+        },
+        {
+          "name": "ecro_shutdown",
+          "parameterTypes": []
+        }
+      ]
+    }
+  ]
+}
