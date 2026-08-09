@@ -10,6 +10,7 @@
    (make-window buf 80 24))
   ([buf width height]
    {:type :window
+    :id (random-uuid)
     :buffer buf
     :top 0
     :left 0
@@ -33,9 +34,18 @@
   ([root-window]
    (make-frame root-window 80 24))
   ([root-window width height]
-   {:width width
-    :height height
-    :root-window root-window}))
+   (let [selected-window (first (wt/collect-windows root-window))]
+     {:width width
+      :height height
+      :root-window root-window
+      :selected-window-id (:id selected-window)})))
+
+
+(defn selected-window
+  "Return the selected leaf window in a frame."
+  [frame]
+  (let [selected-id (:selected-window-id frame)]
+    (first (filter #(= selected-id (:id %)) (wt/collect-windows (:root-window frame))))))
 
 
 (defn- update-window-positions

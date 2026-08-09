@@ -23,7 +23,8 @@
           frame (w/make-frame win)]
       (is (= 24 (:height frame)))
       (is (= 80 (:width frame)))
-      (is (= win (:root-window frame))))))
+      (is (= win (:root-window frame)))
+      (is (= win (w/selected-window frame))))))
 
 
 (deftest test-vertical-split
