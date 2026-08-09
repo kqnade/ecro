@@ -1,5 +1,8 @@
 (ns ecro.native-test
   (:require
+    [clojure.java.io :as io]
+    [clojure.java.shell :as shell]
+    [clojure.string :as str]
     [clojure.test :refer :all]
     [ecro.native :as native]))
 
@@ -67,6 +70,36 @@
                                           "\\\""))
                          metadata)
                 (str method-name " is not registered for reflection"))))))))
+
+
+(deftest native-package-contains-executable-and-rust-library
+  (testing "the release archive puts the executable and Rust library together"
+    (let [temp-dir (.toFile
+                     (java.nio.file.Files/createTempDirectory
+                       "ecro-native-package-test"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+          binary (io/file temp-dir "built-ecro")
+          library (io/file temp-dir "libecro_core.so")
+          archive (io/file temp-dir "ecro-test.tar.gz")]
+      (try
+        (spit binary "native executable")
+        (spit library "Rust shared library")
+        (let [{:keys [exit err]}
+              (shell/sh "bash" "script/package-native.sh" (.getPath archive)
+                        :env {"ECRO_BINARY_PATH" (.getPath binary)
+                              "ECRO_LIBRARY_PATH" (.getPath library)})]
+          (is (zero? exit) err)
+          (is (.isFile archive) "native archive was not created")
+          (when (.isFile archive)
+            (let [{tar-exit :exit tar-output :out tar-error :err}
+                  (shell/sh "tar" "-tzf" (.getPath archive))]
+              (is (zero? tar-exit) tar-error)
+              (is (= #{"ecro" "libecro_core.so"}
+                     (set (str/split-lines tar-output)))))))
+        (finally
+          (doseq [file [archive library binary]]
+            (io/delete-file file true))
+          (io/delete-file temp-dir true))))))
 
 
 (deftest test-jna-library-loaded
