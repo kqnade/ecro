@@ -48,6 +48,12 @@
     (first (filter #(= selected-id (:id %)) (wt/collect-windows (:root-window frame))))))
 
 
+(defn assoc-selected-buffer
+  "Set the buffer displayed by the selected window."
+  [frame buf]
+  (update frame :root-window wt/update-window (:selected-window-id frame) #(assoc % :buffer buf)))
+
+
 (defn- update-window-positions
   "Update positions of all windows in a tree."
   [window top left]

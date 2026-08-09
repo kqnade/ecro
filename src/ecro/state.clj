@@ -34,14 +34,15 @@
   "Set current buffer and keep the buffer list entry synchronized."
   [state buf]
   (let [state' (assoc state :current-buffer buf)]
-    (if-not (contains? state :buffers)
-      state'
-      (let [bufs (:buffers state)
-            exists? (some #(= (:name %) (:name buf)) bufs)
-            updated-bufs (mapv #(if (= (:name %) (:name buf)) buf %) bufs)]
-        (assoc state' :buffers (if exists?
-                                 updated-bufs
-                                 (conj updated-bufs buf)))))))
+    (cond-> (if-not (contains? state :buffers)
+              state'
+              (let [bufs (:buffers state)
+                    exists? (some #(= (:name %) (:name buf)) bufs)
+                    updated-bufs (mapv #(if (= (:name %) (:name buf)) buf %) bufs)]
+                (assoc state' :buffers (if exists?
+                                         updated-bufs
+                                         (conj updated-bufs buf)))))
+      (:frame state') (update :frame window/assoc-selected-buffer buf))))
 
 
 (defn switch-to-buffer

@@ -103,3 +103,13 @@
       (is (= "a" (:text (:current-buffer edited))))
       (is (= "a" (:text (first (:buffers edited)))))
       (is (= "a" (:text (:current-buffer switched-back)))))))
+
+
+(deftest test-current-buffer-edits-update-selected-window
+  (testing "editing current buffer keeps the selected window synchronized"
+    (let [editor-state (state/initial-state {})
+          current-buffer (:current-buffer editor-state)
+          edited-state (state/assoc-current-buffer editor-state
+                                                   (b/insert-char current-buffer \a))]
+      (is (= (:current-buffer edited-state)
+             (:buffer (window/selected-window (:frame edited-state))))))))

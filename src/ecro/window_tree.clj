@@ -9,6 +9,18 @@
     (mapcat collect-windows (:children window))))
 
 
+(defn update-window
+  "Update the leaf with the given ID in a window tree."
+  [tree window-id f]
+  (if (= :window (:type tree))
+    (if (= window-id (:id tree))
+      (f tree)
+      tree)
+    (update tree :children #(mapv (fn [child]
+                                    (update-window child window-id f))
+                                  %))))
+
+
 (defn remove-window
   "Remove a leaf window from a window tree. Returns the remaining tree,
    or nil if the last window is removed."
