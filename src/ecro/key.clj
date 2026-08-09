@@ -15,6 +15,12 @@
     [ecro.state :as state]))
 
 
+(def control-modifier 1)
+
+
+(def alt-modifier 2)
+
+
 (def shift-modifier 4)
 
 
@@ -131,7 +137,7 @@
 
 (defn- handle-isearch-key
   "Handle a key event while incremental search is active."
-  [editor-state key-code]
+  [editor-state key-code modifiers]
   (cond
     (= key-code 13)
     (dissoc editor-state :isearch)
@@ -153,7 +159,8 @@
     (terminal-sentinel-key-code? key-code)
     editor-state
 
-    (>= key-code 32)
+    (and (>= key-code 32)
+         (zero? (bit-and modifiers (bit-or control-modifier alt-modifier))))
     (if-let [text (code-point-string key-code)]
       (let [isearch (search/isearch-add-char (:isearch editor-state) text)
             buf (search/isearch-execute isearch (:current-buffer editor-state))]
@@ -265,7 +272,7 @@
   "Handle a key event and return updated state."
   [editor-state key-code modifiers]
   (if (:isearch editor-state)
-    (handle-isearch-key editor-state key-code)
+    (handle-isearch-key editor-state key-code modifiers)
     (if (:minibuffer editor-state)
       (handle-minibuffer-key editor-state key-code)
       (let [key-str (key-name key-code modifiers)]

@@ -136,6 +136,20 @@
       (is (= 6 (get-in after-specials [:current-buffer :point]))))))
 
 
+(deftest test-incremental-search-classifies-modifiers
+  (testing "Shift text is accepted while unrelated Ctrl and Alt chords are ignored"
+    (let [state {:current-buffer (assoc (b/make-buffer "test") :text "W")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          shifted (key/handle-key started (int \W) key/shift-modifier)
+          after-chords (-> shifted
+                           (key/handle-key (int \g) 1)
+                           (key/handle-key (int \x) 2))]
+      (is (= "W" (get-in after-chords [:isearch :pattern])))
+      (is (= 0 (get-in after-chords [:current-buffer :point]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
