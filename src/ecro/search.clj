@@ -35,6 +35,12 @@
   (update state :pattern str ch))
 
 
+(defn isearch-delete-char
+  "Remove the last character from the i-search pattern."
+  [state]
+  (update state :pattern #(subs % 0 (max 0 (dec (count %))))))
+
+
 (defn isearch-execute
   "Execute i-search with current pattern. Returns updated buffer."
   [state buf]
@@ -45,7 +51,7 @@
                      :forward (search-forward (assoc buf :point start-point) pattern)
                      :backward (search-backward (assoc buf :point start-point) pattern))]
         (or result (assoc buf :point start-point)))
-      buf)))
+      (assoc buf :point start-point))))
 
 
 (defn isearch-cancel

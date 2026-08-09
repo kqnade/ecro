@@ -80,6 +80,20 @@
       (is (= "I-search backward: b" (render/status-line searched))))))
 
 
+(deftest test-incremental-search-backspace
+  (testing "BS removes the last query character and recomputes the match"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \w) 0)
+          cleared (key/handle-key searched 127 0)]
+      (is (= 6 (get-in searched [:current-buffer :point])))
+      (is (= "" (get-in cleared [:isearch :pattern])))
+      (is (= 0 (get-in cleared [:current-buffer :point]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
