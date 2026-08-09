@@ -85,6 +85,12 @@
   (assoc-frame state (window/delete-window (:frame state) target-window)))
 
 
+(defn delete-other-windows
+  "Keep only a window and synchronize its buffer with editor state."
+  [state target-window]
+  (assoc-frame state (window/delete-other-windows (:frame state) target-window)))
+
+
 (defn switch-to-buffer
   "Switch current buffer by name. Creates new buffer if not found."
   [state name]
