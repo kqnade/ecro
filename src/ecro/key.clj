@@ -115,6 +115,13 @@
       :else state)))
 
 
+(defn- code-point-string
+  "Convert a valid Unicode code point to a string."
+  [key-code]
+  (when (Character/isValidCodePoint key-code)
+    (String. (Character/toChars key-code))))
+
+
 (defn- handle-isearch-key
   "Handle a key event while incremental search is active."
   [editor-state key-code]
@@ -137,11 +144,13 @@
           (state/assoc-current-buffer buf)))
 
     (>= key-code 32)
-    (let [isearch (search/isearch-add-char (:isearch editor-state) (char key-code))
-          buf (search/isearch-execute isearch (:current-buffer editor-state))]
-      (-> editor-state
-          (assoc :isearch isearch)
-          (state/assoc-current-buffer buf)))
+    (if-let [text (code-point-string key-code)]
+      (let [isearch (search/isearch-add-char (:isearch editor-state) text)
+            buf (search/isearch-execute isearch (:current-buffer editor-state))]
+        (-> editor-state
+            (assoc :isearch isearch)
+            (state/assoc-current-buffer buf)))
+      editor-state)
 
     :else editor-state))
 

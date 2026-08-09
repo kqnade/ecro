@@ -109,6 +109,18 @@
       (is (nil? (:isearch canceled))))))
 
 
+(deftest test-incremental-search-non-bmp-character
+  (testing "a non-BMP Unicode code point is added to the query without throwing"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "a😀b")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started 0x1F600 0)]
+      (is (= "😀" (get-in searched [:isearch :pattern])))
+      (is (= 1 (get-in searched [:current-buffer :point]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
