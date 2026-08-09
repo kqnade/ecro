@@ -15,11 +15,16 @@
       UUID)))
 
 
+(defn- file-attribute-view
+  [path attribute-view-class]
+  (Files/getFileAttributeView path
+                              attribute-view-class
+                              (make-array LinkOption 0)))
+
+
 (defn- posix-attribute-view
   [path]
-  (Files/getFileAttributeView path
-                              PosixFileAttributeView
-                              (make-array LinkOption 0)))
+  (file-attribute-view path PosixFileAttributeView))
 
 
 (defn- preserve-posix-attributes
