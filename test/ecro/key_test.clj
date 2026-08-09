@@ -48,6 +48,27 @@
       (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
 
 
+(deftest test-handle-key-deletes-selected-window
+  (testing "ESC 0 deletes the selected window and synchronizes current buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          scratch-buffer (:current-buffer editor-state)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          second-window (second (window/get-windows split-frame))
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          deleted-state (key/handle-key (assoc second-shows-other :key-sequence ["ESC"])
+                                        (int \0)
+                                        0)]
+      (is (= 1 (count (window/get-windows (:frame deleted-state)))))
+      (is (= (:id scratch-buffer) (:id (:current-buffer deleted-state))))
+      (is (= [] (:key-sequence deleted-state))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}

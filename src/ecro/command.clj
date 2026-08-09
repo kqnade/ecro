@@ -9,7 +9,8 @@
     [ecro.notification :as notification]
     [ecro.scroll :as scroll]
     [ecro.state :as state]
-    [ecro.undo :as undo]))
+    [ecro.undo :as undo]
+    [ecro.window :as window]))
 
 
 (defn- save-buffer
@@ -59,6 +60,13 @@
 
       (= command :list-buffers)
       (state/list-buffers editor-state)
+
+      (= command :delete-window)
+      (let [selected-window (some-> (:frame editor-state) window/selected-window)
+            updated-state (if selected-window
+                            (state/delete-window editor-state selected-window)
+                            editor-state)]
+        (assoc updated-state :kill-ring kill-ring :key-sequence []))
 
       (= command :toggle-skk)
       (let [buf (:current-buffer editor-state)
