@@ -5,6 +5,7 @@
   (:import
     (java.nio.file
       CopyOption
+      FileSystemLoopException
       Files
       LinkOption
       StandardCopyOption)
@@ -76,9 +77,16 @@
 
 (defn- resolve-save-target
   [filepath]
-  (let [target (-> filepath io/file .toPath .toAbsolutePath)]
+  (loop [target (-> filepath io/file .toPath .toAbsolutePath .normalize)
+         seen #{}]
     (if (Files/isSymbolicLink target)
-      (.toRealPath target (make-array LinkOption 0))
+      (if (contains? seen target)
+        (throw (FileSystemLoopException. (str target)))
+        (let [referent (Files/readSymbolicLink target)
+              resolved (if (.isAbsolute referent)
+                         referent
+                         (.resolve (.getParent target) referent))]
+          (recur (.normalize resolved) (conj seen target))))
       target)))
 
 
