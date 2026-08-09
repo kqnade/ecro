@@ -36,9 +36,17 @@
                     (make-array FileAttribute 0)))
 
 
+(defn- resolve-save-target
+  [filepath]
+  (let [target (-> filepath io/file .toPath .toAbsolutePath)]
+    (if (Files/isSymbolicLink target)
+      (.toRealPath target (make-array LinkOption 0))
+      target)))
+
+
 (defn- atomic-spit
   [filepath text]
-  (let [target (-> filepath io/file .toPath .toAbsolutePath)
+  (let [target (resolve-save-target filepath)
         temp-file (create-save-temp-file target)]
     (try
       (preserve-posix-permissions target temp-file)

@@ -60,6 +60,28 @@
           (Files/deleteIfExists test-dir))))))
 
 
+(deftest test-write-file-through-symlink-replaces-referent
+  (testing "writing through a symlink preserves the link and replaces its referent"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_symlink_"
+                                              (make-array FileAttribute 0))
+          referent (.resolve test-dir "referent.txt")
+          symlink (.resolve test-dir "link.txt")]
+      (try
+        (spit (.toFile referent) "old content")
+        (Files/createSymbolicLink symlink
+                                  (.getFileName referent)
+                                  (make-array FileAttribute 0))
+        (f/write-file {:name "link.txt"
+                       :text "new content"
+                       :filepath (str symlink)})
+        (is (Files/isSymbolicLink symlink))
+        (is (= "new content" (slurp (.toFile referent))))
+        (finally
+          (Files/deleteIfExists symlink)
+          (Files/deleteIfExists referent)
+          (Files/deleteIfExists test-dir))))))
+
+
 (deftest test-write-file-preserves-existing-permissions
   (testing "atomic replacement keeps the existing file permissions"
     (let [test-dir (Files/createTempDirectory "ecro_atomic_save_permissions_"
