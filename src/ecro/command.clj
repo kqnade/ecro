@@ -64,6 +64,12 @@
                              :start-point (:point buf))
              :key-sequence [])
 
+      (= command :isearch-backward)
+      (assoc editor-state
+             :isearch (assoc (search/make-isearch :backward)
+                             :start-point (:point buf))
+             :key-sequence [])
+
       (= command :list-buffers)
       (state/list-buffers editor-state)
 

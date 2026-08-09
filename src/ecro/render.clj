@@ -57,7 +57,10 @@
   [state]
   (cond
     (:isearch state)
-    (str "I-search: " (get-in state [:isearch :pattern]))
+    (str (if (= :backward (get-in state [:isearch :direction]))
+           "I-search backward: "
+           "I-search: ")
+         (get-in state [:isearch :pattern]))
 
     (:minibuffer state)
     (let [mb (:minibuffer state)]

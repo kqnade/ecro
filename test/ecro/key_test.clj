@@ -65,6 +65,21 @@
       (is (nil? (:isearch accepted))))))
 
 
+(deftest test-backward-incremental-search-integration
+  (testing "C-r searches backward as characters are typed"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "foo bar foo"
+                                        :point 11)
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \r) 1)
+          searched (key/handle-key started (int \b) 0)]
+      (is (= :backward (get-in started [:isearch :direction])))
+      (is (= "b" (get-in searched [:isearch :pattern])))
+      (is (= 4 (get-in searched [:current-buffer :point])))
+      (is (= "I-search backward: b" (render/status-line searched))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
