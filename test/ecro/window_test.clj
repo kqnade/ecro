@@ -74,6 +74,16 @@
       (is (= (first wins) (w/prev-window frame2 (second wins)))))))
 
 
+(deftest test-select-window
+  (testing "selecting a window updates the frame selection"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          target-window (second (w/get-windows split-frame))
+          selected-frame (w/select-window split-frame target-window)]
+      (is (= target-window (w/selected-window selected-frame))))))
+
+
 (deftest test-window-buffer-assignment
   (testing "assigning different buffers to windows"
     (let [buf1 (b/make-buffer "buffer1")

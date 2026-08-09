@@ -48,6 +48,14 @@
     (first (filter #(= selected-id (:id %)) (wt/collect-windows (:root-window frame))))))
 
 
+(defn select-window
+  "Select a leaf window in a frame."
+  [frame window]
+  (if (some #(= (:id window) (:id %)) (wt/collect-windows (:root-window frame)))
+    (assoc frame :selected-window-id (:id window))
+    frame))
+
+
 (defn assoc-selected-buffer
   "Set the buffer displayed by the selected window."
   [frame buf]
