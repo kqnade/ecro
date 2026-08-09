@@ -124,6 +124,12 @@
           (io/delete-file temp-dir true))))))
 
 
+(deftest release-workflow-packages-native-distribution
+  (testing "the release workflow uses the verified native packaging script"
+    (is (re-find #"\./script/package-native\.sh"
+                 (slurp ".github/workflows/release.yml")))))
+
+
 (deftest test-jna-library-loaded
   (testing "JNA library is loaded or gracefully handles missing library"
     (is lib-available?)))
