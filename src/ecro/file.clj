@@ -90,6 +90,15 @@
       target)))
 
 
+(defn- move-file-atomically
+  "Replace target atomically or throw; never fall back to a non-atomic move."
+  [source target]
+  (Files/move source
+              target
+              (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                      StandardCopyOption/REPLACE_EXISTING])))
+
+
 (defn- atomic-spit
   [filepath text]
   (let [target (resolve-save-target filepath)
@@ -98,10 +107,7 @@
       (preserve-posix-attributes target temp-file)
       (preserve-acl-attributes target temp-file)
       (spit (.toFile temp-file) text)
-      (Files/move temp-file
-                  target
-                  (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
-                                          StandardCopyOption/REPLACE_EXISTING]))
+      (move-file-atomically temp-file target)
       (finally
         (Files/deleteIfExists temp-file)))))
 
