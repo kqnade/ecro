@@ -131,8 +131,8 @@
   "Get the previous window in the frame."
   [frame window]
   (let [wins (get-windows frame)
-        idx (.indexOf wins window)]
-    (if (> idx 0)
+        idx (window-index wins window)]
+    (if (and (some? idx) (> idx 0))
       (nth wins (dec idx))
       (last wins))))
 
