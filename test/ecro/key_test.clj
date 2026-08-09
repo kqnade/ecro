@@ -69,6 +69,28 @@
       (is (= [] (:key-sequence deleted-state))))))
 
 
+(deftest test-handle-key-deletes-other-windows
+  (testing "ESC 1 keeps the selected window and its current buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          second-window (second (window/get-windows split-frame))
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          single-window-state (key/handle-key (assoc second-shows-other :key-sequence ["ESC"])
+                                              (int \1)
+                                              0)]
+      (is (= 1 (count (window/get-windows (:frame single-window-state)))))
+      (is (= (:id other-buffer) (:id (:current-buffer single-window-state))))
+      (is (= (:id other-buffer)
+             (:buffer-id (window/selected-window (:frame single-window-state)))))
+      (is (= [] (:key-sequence single-window-state))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}

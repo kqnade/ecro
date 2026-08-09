@@ -68,6 +68,13 @@
                             editor-state)]
         (assoc updated-state :kill-ring kill-ring :key-sequence []))
 
+      (= command :delete-other-windows)
+      (let [selected-window (some-> (:frame editor-state) window/selected-window)
+            updated-state (if selected-window
+                            (state/delete-other-windows editor-state selected-window)
+                            editor-state)]
+        (assoc updated-state :kill-ring kill-ring :key-sequence []))
+
       (= command :toggle-skk)
       (let [buf (:current-buffer editor-state)
             new-buf (mode/toggle-minor-mode buf :skk-mode)
