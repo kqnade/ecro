@@ -100,13 +100,17 @@
 (defn split-window-horizontal
   "Split a window horizontally (stacked)."
   [frame window]
-  (let [new-height (/ (:height window) 2)
-        buf (b/make-buffer "*new*")
-        new-window (assoc (make-window buf (:width window) new-height) :parent window)
-        updated-window (assoc window :height new-height)
-        container (make-container :horizontal [updated-window new-window] (:width window) (:height window))]
-    (if (= window (:root-window frame))
-      (make-frame (update-window-positions container 0 0) (:width frame) (:height frame))
+  (let [root-window (:root-window frame)]
+    (if (wt/same-window? window root-window)
+      (let [new-height (/ (:height root-window) 2)
+            buf (b/make-buffer "*new*")
+            new-window (assoc (make-window buf (:width root-window) new-height) :parent root-window)
+            updated-window (assoc root-window :height new-height)
+            container (make-container :horizontal
+                                      [updated-window new-window]
+                                      (:width root-window)
+                                      (:height root-window))]
+        (make-frame (update-window-positions container 0 0) (:width frame) (:height frame)))
       frame)))
 
 

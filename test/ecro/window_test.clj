@@ -60,6 +60,17 @@
       (is (= 12 (:height (first (:children (:root-window new-frame)))))))))
 
 
+(deftest test-horizontal-split-accepts-stale-handle
+  (testing "horizontal split identifies its target by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          stale-window (:root-window frame)
+          edited-buffer (b/insert-char (:buffer stale-window) \a)
+          updated-frame (w/assoc-selected-buffer frame edited-buffer)
+          split-frame (w/split-window-horizontal updated-frame stale-window)]
+      (is (= 2 (count (w/get-windows split-frame)))))))
+
+
 (deftest test-split-non-root-window-returns-unchanged
   (testing "splitting a non-root window returns the frame unchanged"
     (let [buf (b/make-buffer "test")
