@@ -122,6 +122,13 @@
     (= key-code 13)
     (dissoc editor-state :isearch)
 
+    (= key-code 27)
+    (let [buf (search/isearch-cancel (:isearch editor-state)
+                                     (:current-buffer editor-state))]
+      (-> editor-state
+          (dissoc :isearch)
+          (state/assoc-current-buffer buf)))
+
     (= key-code 127)
     (let [isearch (search/isearch-delete-char (:isearch editor-state))
           buf (search/isearch-execute isearch (:current-buffer editor-state))]

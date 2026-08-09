@@ -94,6 +94,21 @@
       (is (= 0 (get-in cleared [:current-buffer :point]))))))
 
 
+(deftest test-incremental-search-cancel
+  (testing "ESC cancels search and restores the starting point"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world"
+                                        :point 2)
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \w) 0)
+          canceled (key/handle-key searched 27 0)]
+      (is (= 6 (get-in searched [:current-buffer :point])))
+      (is (= 2 (get-in canceled [:current-buffer :point])))
+      (is (nil? (:isearch canceled))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
