@@ -152,6 +152,21 @@
                  (slurp ".github/workflows/release.yml")))))
 
 
+(deftest pr-ci-smoke-tests-native-distributions-on-linux-and-macos
+  (testing "PR CI builds, packages, extracts, and smoke-tests both release platforms"
+    (let [workflow (slurp ".github/workflows/ci.yml")]
+      (is (re-find #"(?s)native-image:.*?matrix:.*?os: \[ubuntu-latest, macos-latest\]"
+                   workflow)
+          "native-image CI does not use the release OS matrix")
+      (is (not (re-find #"github\.ref == 'refs/heads/main'" workflow))
+          "native-image CI is still skipped on pull requests")
+      (doseq [command ["./script/package-native.sh"
+                       "tar -xzf"
+                       "--smoke-test"]]
+        (is (str/includes? workflow command)
+            (str command " is missing from native-image CI"))))))
+
+
 (deftest test-jna-library-loaded
   (testing "JNA library is loaded from the Rust build output"
     (is lib-available?)))
