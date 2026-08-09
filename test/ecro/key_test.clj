@@ -121,6 +121,21 @@
       (is (= 1 (get-in searched [:current-buffer :point]))))))
 
 
+(deftest test-incremental-search-ignores-terminal-sentinel-codes
+  (testing "navigation and function key sentinels do not enter the query"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \w) 0)
+          after-specials (reduce #(key/handle-key %1 %2 0)
+                                 searched
+                                 [1001 1004 1005 1010 2001])]
+      (is (= "w" (get-in after-specials [:isearch :pattern])))
+      (is (= 6 (get-in after-specials [:current-buffer :point]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}

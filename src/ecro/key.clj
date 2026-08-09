@@ -122,6 +122,13 @@
     (String. (Character/toChars key-code))))
 
 
+(defn- terminal-sentinel-key-code?
+  "Return true for non-character key codes reserved by the terminal adapter."
+  [key-code]
+  (or (<= 1001 key-code 1010)
+      (<= 2001 key-code 2255)))
+
+
 (defn- handle-isearch-key
   "Handle a key event while incremental search is active."
   [editor-state key-code]
@@ -142,6 +149,9 @@
       (-> editor-state
           (assoc :isearch isearch)
           (state/assoc-current-buffer buf)))
+
+    (terminal-sentinel-key-code? key-code)
+    editor-state
 
     (>= key-code 32)
     (if-let [text (code-point-string key-code)]
