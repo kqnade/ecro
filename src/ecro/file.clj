@@ -56,9 +56,7 @@
 (defn- create-save-temp-file
   [target]
   (Files/createFile (.resolve (.getParent target)
-                              (str "."
-                                   (.getFileName target)
-                                   "."
+                              (str ".ecro-"
                                    (UUID/randomUUID)
                                    ".tmp"))
                     (make-array FileAttribute 0)))

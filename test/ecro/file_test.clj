@@ -215,6 +215,23 @@
           (Files/deleteIfExists test-dir))))))
 
 
+(deftest test-write-file-with-long-target-name
+  (testing "atomic save keeps its temporary filename below the component limit"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_long_name_"
+                                              (make-array FileAttribute 0))
+          filename (str (apply str (repeat 220 "a")) ".txt")
+          test-file (.resolve test-dir filename)]
+      (try
+        (spit (.toFile test-file) "old content")
+        (f/write-file {:name filename
+                       :text "new content"
+                       :filepath (str test-file)})
+        (is (= "new content" (slurp (.toFile test-file))))
+        (finally
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
+
+
 (deftest test-write-file-cleans-up-after-replacement-failure
   (testing "a failed atomic replacement preserves the target and removes its temporary file"
     (let [test-dir (Files/createTempDirectory "ecro_atomic_save_failure_"
