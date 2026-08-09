@@ -38,7 +38,11 @@
 (defn isearch-delete-char
   "Remove the last character from the i-search pattern."
   [state]
-  (update state :pattern #(subs % 0 (max 0 (dec (count %))))))
+  (update state :pattern
+          (fn [^String pattern]
+            (if (empty? pattern)
+              pattern
+              (subs pattern 0 (.offsetByCodePoints pattern (count pattern) -1))))))
 
 
 (defn isearch-execute

@@ -110,15 +110,18 @@
 
 
 (deftest test-incremental-search-non-bmp-character
-  (testing "a non-BMP Unicode code point is added to the query without throwing"
+  (testing "a non-BMP code point can be added and removed as one character"
     (let [state {:current-buffer (assoc (b/make-buffer "test")
                                         :text "a😀b")
                  :keymap bindings/default-keymap
                  :key-sequence []}
           started (key/handle-key state (int \s) 1)
-          searched (key/handle-key started 0x1F600 0)]
+          searched (key/handle-key started 0x1F600 0)
+          cleared (key/handle-key searched 127 0)]
       (is (= "😀" (get-in searched [:isearch :pattern])))
-      (is (= 1 (get-in searched [:current-buffer :point]))))))
+      (is (= 1 (get-in searched [:current-buffer :point])))
+      (is (= "" (get-in cleared [:isearch :pattern])))
+      (is (= 0 (get-in cleared [:current-buffer :point]))))))
 
 
 (deftest test-incremental-search-ignores-terminal-sentinel-codes
