@@ -154,6 +154,16 @@
       (is (= 1 (count (w/get-windows deleted-frame)))))))
 
 
+(deftest test-delete-only-window-does-not-restore-stale-handle
+  (testing "delete-window keeps the current tree value when it cannot remove the last window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          current-window (:root-window frame)
+          stale-window (assoc current-window :top 99)
+          unchanged-frame (w/delete-window frame stale-window)]
+      (is (= current-window (:root-window unchanged-frame))))))
+
+
 (deftest test-delete-other-windows
   (testing "delete-other-windows keeps only the given window"
     (let [buf (b/make-buffer "test")

@@ -169,7 +169,7 @@
         new-root (wt/remove-window root window)]
     (if new-root
       (make-frame (update-window-positions new-root 0 0) (:width frame) (:height frame))
-      (make-frame window (:width frame) (:height frame)))))
+      (make-frame root (:width frame) (:height frame)))))
 
 
 (defn delete-other-windows
