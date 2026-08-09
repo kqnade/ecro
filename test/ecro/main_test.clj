@@ -4,7 +4,8 @@
     [clojure.test :refer :all]
     [ecro.buffer :as b]
     [ecro.kill-ring :as kr]
-    [ecro.main :as main]))
+    [ecro.main :as main]
+    [ecro.window :as window]))
 
 
 (deftest test-lead-key-configurable
@@ -31,7 +32,9 @@
       (is (contains? state :running))
       (is (contains? state :key-sequence))
       (is (contains? state :keymap))
-      (is (contains? state :current-buffer)))))
+      (is (contains? state :current-buffer))
+      (is (= (:current-buffer state)
+             (:buffer (window/selected-window (:frame state))))))))
 
 
 (deftest test-kill-line-integration

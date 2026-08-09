@@ -3,7 +3,6 @@
   (:require
     [ecro.bindings :as bindings]
     [ecro.key :as key]
-    [ecro.kill-ring :as kr]
     [ecro.native :as native]
     [ecro.render :as render]
     [ecro.state :as state]))
@@ -19,10 +18,7 @@
 
 
 (defonce editor-state
-  (atom (assoc (state/initial-state default-keymap)
-               :current-buffer nil
-               :buffers []
-               :kill-ring (kr/make-kill-ring))))
+  (atom (state/initial-state default-keymap)))
 
 
 (def add-buffer state/add-buffer)
