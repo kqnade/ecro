@@ -128,8 +128,11 @@
       (= key-code 127) ; Backspace
       (update-in state [:minibuffer :buffer] buffer/delete-char-backward)
 
-      (>= key-code 32) ; Printable char
-      (update-in state [:minibuffer :buffer] buffer/insert-char (char key-code))
+      (function-key-code? key-code)
+      state
+
+      (printable-key-code? key-code)
+      (update-in state [:minibuffer :buffer] buffer/insert-text (key-code->string key-code))
 
       :else state)))
 
