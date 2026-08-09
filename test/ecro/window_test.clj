@@ -178,6 +178,18 @@
       (is (nil? (-> kept :root-window :parent))))))
 
 
+(deftest test-delete-other-windows-accepts-stale-handle
+  (testing "delete-other-windows keeps the current tree value identified by window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          current-target (second (w/get-windows split-frame))
+          stale-target (assoc current-target :buffer-id (random-uuid))
+          kept-frame (w/delete-other-windows split-frame stale-target)]
+      (is (= (:buffer-id current-target)
+             (:buffer-id (:root-window kept-frame)))))))
+
+
 (deftest test-other-window
   (testing "other-window cycles to the next window"
     (let [buf (b/make-buffer "test")

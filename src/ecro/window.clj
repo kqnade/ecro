@@ -175,7 +175,11 @@
 (defn delete-other-windows
   "Keep only the given window in the frame. Returns updated frame."
   [frame window]
-  (make-frame (assoc window :parent nil :width (:width frame) :height (:height frame)) (:width frame) (:height frame)))
+  (if-let [current-window (first (filter #(wt/same-window? % window) (get-windows frame)))]
+    (make-frame (assoc current-window :parent nil :width (:width frame) :height (:height frame))
+                (:width frame)
+                (:height frame))
+    frame))
 
 
 (defn other-window
