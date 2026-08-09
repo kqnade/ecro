@@ -138,3 +138,15 @@
       (is (= 40 (:height resized)))
       (is (= 100 (:width (:root-window resized))))
       (is (= 40 (:height (:root-window resized)))))))
+
+
+(deftest test-frame-resize-preserves-selected-window
+  (testing "resizing a split frame preserves its selected window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          target-window (second (w/get-windows split-frame))
+          selected-frame (w/select-window split-frame target-window)
+          resized-frame (w/resize-frame selected-frame 100 40)]
+      (is (= (:id target-window)
+             (:id (w/selected-window resized-frame)))))))

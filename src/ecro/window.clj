@@ -160,4 +160,5 @@
   (let [root (:root-window frame)
         resized-root (assoc root :width width :height height)
         updated-root (update-window-positions resized-root 0 0)]
-    (make-frame updated-root width height)))
+    (assoc (make-frame updated-root width height)
+           :selected-window-id (:selected-window-id frame))))
