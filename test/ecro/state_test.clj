@@ -177,3 +177,24 @@
                                         (:buffers reselected-state)))]
       (is (= "a" (:text (:current-buffer reselected-state))))
       (is (= "a" (:text scratch-buffer))))))
+
+
+(deftest test-delete-selected-window-synchronizes-current-buffer
+  (testing "deleting the selected window selects the remaining window buffer"
+    (let [editor-state (state/initial-state {})
+          scratch-buffer (:current-buffer editor-state)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          second-window (second (window/get-windows split-frame))
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          selected-window (window/selected-window (:frame second-shows-other))
+          deleted-state (state/delete-window second-shows-other selected-window)]
+      (is (= 1 (count (window/get-windows (:frame deleted-state)))))
+      (is (= (:id scratch-buffer) (:id (:current-buffer deleted-state))))
+      (is (= (:id scratch-buffer)
+             (:buffer-id (window/selected-window (:frame deleted-state))))))))

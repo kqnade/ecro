@@ -57,6 +57,15 @@
       (:frame state') (update :frame window/assoc-selected-buffer buf))))
 
 
+(defn- assoc-frame
+  [state frame]
+  (let [selected-window (window/selected-window frame)
+        selected-buffer (buffer-by-id state (:buffer-id selected-window))]
+    (if selected-buffer
+      (assoc-current-buffer (assoc state :frame frame) selected-buffer)
+      (assoc state :frame frame))))
+
+
 (defn select-window
   "Select a frame window and synchronize its buffer with editor state."
   [state target-window]
@@ -68,6 +77,12 @@
              selected-buffer)
       (assoc-current-buffer (assoc state :frame frame) selected-buffer)
       state)))
+
+
+(defn delete-window
+  "Delete a window and synchronize the selected buffer with editor state."
+  [state target-window]
+  (assoc-frame state (window/delete-window (:frame state) target-window)))
 
 
 (defn switch-to-buffer
