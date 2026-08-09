@@ -131,6 +131,26 @@
           (io/delete-file dst-file true))))))
 
 
+(deftest test-write-file-as-atomically-replaces-existing-file
+  (testing "write-file-as replaces the destination instead of modifying it in place"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_write_file_as_"
+                                              (make-array FileAttribute 0))
+          destination (.resolve test-dir "destination.txt")
+          old-destination-link (.resolve test-dir "old-destination.txt")]
+      (try
+        (spit (.toFile destination) "old content")
+        (Files/createLink old-destination-link destination)
+        (f/write-file-as {:name "source.txt"
+                          :text "new content"}
+                         (str destination))
+        (is (= "new content" (slurp (.toFile destination))))
+        (is (= "old content" (slurp (.toFile old-destination-link))))
+        (finally
+          (Files/deleteIfExists old-destination-link)
+          (Files/deleteIfExists destination)
+          (Files/deleteIfExists test-dir))))))
+
+
 (deftest test-save-buffer-command
   (testing "save-buffer writes buffer to its filepath"
     (let [test-file (str (System/getProperty "java.io.tmpdir") "/ecro_test_" (System/currentTimeMillis) ".txt")]
