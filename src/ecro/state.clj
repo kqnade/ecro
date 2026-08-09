@@ -3,7 +3,8 @@
     [clojure.string :as str]
     [ecro.buffer :as buffer]
     [ecro.kill-ring :as kr]
-    [ecro.skk.sources :as skk-sources]))
+    [ecro.skk.sources :as skk-sources]
+    [ecro.window :as window]))
 
 
 (defn initial-state
@@ -13,7 +14,7 @@
     {:running true
      :key-sequence []
      :keymap keymap
-     :frame nil
+     :frame (window/make-frame (window/make-window scratch))
      :current-buffer scratch
      :buffers [scratch]
      :kill-ring (kr/make-kill-ring)

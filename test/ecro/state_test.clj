@@ -2,7 +2,15 @@
   (:require
     [clojure.test :refer :all]
     [ecro.buffer :as b]
-    [ecro.state :as state]))
+    [ecro.state :as state]
+    [ecro.window :as window]))
+
+
+(deftest test-initial-state-creates-window-state
+  (testing "initial state displays the scratch buffer in its selected window"
+    (let [editor-state (state/initial-state {})
+          selected-window (window/selected-window (:frame editor-state))]
+      (is (= (:current-buffer editor-state) (:buffer selected-window))))))
 
 
 (deftest test-add-buffer-to-list
