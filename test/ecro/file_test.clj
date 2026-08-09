@@ -2,7 +2,12 @@
   (:require
     [clojure.java.io :as io]
     [clojure.test :refer :all]
-    [ecro.file :as f]))
+    [ecro.file :as f])
+  (:import
+    (java.nio.file
+      Files)
+    (java.nio.file.attribute
+      FileAttribute)))
 
 
 (deftest test-read-file
@@ -29,6 +34,26 @@
           (is (= "hello ecro" (slurp test-file))))
         (finally
           (io/delete-file test-file true))))))
+
+
+(deftest test-write-file-atomically-replaces-existing-file
+  (testing "writing replaces the file instead of modifying it in place"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_"
+                                              (make-array FileAttribute 0))
+          test-file (.resolve test-dir "target.txt")
+          old-file-link (.resolve test-dir "old-target.txt")]
+      (try
+        (spit (.toFile test-file) "old content")
+        (Files/createLink old-file-link test-file)
+        (f/write-file {:name "target.txt"
+                       :text "new content"
+                       :filepath (str test-file)})
+        (is (= "new content" (slurp (.toFile test-file))))
+        (is (= "old content" (slurp (.toFile old-file-link))))
+        (finally
+          (Files/deleteIfExists old-file-link)
+          (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
 
 
 (deftest test-find-file-command

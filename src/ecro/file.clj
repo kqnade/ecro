@@ -1,7 +1,31 @@
 (ns ecro.file
   (:require
     [clojure.java.io :as io]
-    [ecro.buffer :as b]))
+    [ecro.buffer :as b])
+  (:import
+    (java.nio.file
+      CopyOption
+      Files
+      StandardCopyOption)
+    (java.nio.file.attribute
+      FileAttribute)))
+
+
+(defn- atomic-spit
+  [filepath text]
+  (let [target (-> filepath io/file .toPath .toAbsolutePath)
+        temp-file (Files/createTempFile (.getParent target)
+                                        (str "." (.getFileName target) ".")
+                                        ".tmp"
+                                        (make-array FileAttribute 0))]
+    (try
+      (spit (.toFile temp-file) text)
+      (Files/move temp-file
+                  target
+                  (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                          StandardCopyOption/REPLACE_EXISTING]))
+      (finally
+        (Files/deleteIfExists temp-file)))))
 
 
 (defn read-file
@@ -23,7 +47,7 @@
   "Write buffer content to its filepath. Returns nil if no filepath."
   [buf]
   (when-let [filepath (:filepath buf)]
-    (spit filepath (:text buf))
+    (atomic-spit filepath (:text buf))
     buf))
 
 
