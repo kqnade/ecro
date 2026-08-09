@@ -234,4 +234,6 @@
                        editor-state)
                      editor-state)
         [_ height] (or (native/get-terminal-size) [80 24])]
-    (update next-state :current-buffer scroll/adjust-scroll-for-point (dec height))))
+    (state/assoc-current-buffer next-state
+                                (scroll/adjust-scroll-for-point (:current-buffer next-state)
+                                                                (dec height)))))

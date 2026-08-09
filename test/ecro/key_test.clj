@@ -4,7 +4,10 @@
     [clojure.test :refer :all]
     [ecro.bindings :as bindings]
     [ecro.buffer :as b]
-    [ecro.key :as key]))
+    [ecro.key :as key]
+    [ecro.native :as native]
+    [ecro.state :as state]
+    [ecro.window :as window]))
 
 
 (deftest test-key-name-control-shift-and-control-slash
@@ -99,3 +102,17 @@
       (is (= 0 (:mark buf)))
       (is (= 2 (:point buf)))
       (is (= "abc" (:text buf))))))
+
+
+(deftest test-process-event-keeps-selected-window-buffer-synchronized
+  (testing "scroll adjustment updates the selected window buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          current-buffer (assoc (:current-buffer editor-state)
+                                :text "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
+                                :point 15)
+          state-with-point (state/assoc-current-buffer editor-state current-buffer)
+          processed-state (with-redefs [native/get-terminal-size (constantly [80 6])]
+                            (key/process-event state-with-point nil))]
+      (is (= 3 (:scroll-line (:current-buffer processed-state))))
+      (is (= (:current-buffer processed-state)
+             (:buffer (window/selected-window (:frame processed-state))))))))
