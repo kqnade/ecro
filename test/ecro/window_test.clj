@@ -38,6 +38,17 @@
       (is (= 40 (:width (first (:children (:root-window new-frame)))))))))
 
 
+(deftest test-vertical-split-accepts-stale-handle
+  (testing "vertical split identifies its target by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          stale-window (:root-window frame)
+          edited-buffer (b/insert-char (:buffer stale-window) \a)
+          updated-frame (w/assoc-selected-buffer frame edited-buffer)
+          split-frame (w/split-window-vertical updated-frame stale-window)]
+      (is (= 2 (count (w/get-windows split-frame)))))))
+
+
 (deftest test-horizontal-split
   (testing "splitting window horizontally creates two windows stacked"
     (let [buf (b/make-buffer "test")

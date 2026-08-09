@@ -83,13 +83,17 @@
 (defn split-window-vertical
   "Split a window vertically (side by side)."
   [frame window]
-  (let [new-width (/ (:width window) 2)
-        buf (b/make-buffer "*new*")
-        new-window (assoc (make-window buf new-width (:height window)) :parent window)
-        updated-window (assoc window :width new-width)
-        container (make-container :vertical [updated-window new-window] (:width window) (:height window))]
-    (if (= window (:root-window frame))
-      (make-frame (update-window-positions container 0 0) (:width frame) (:height frame))
+  (let [root-window (:root-window frame)]
+    (if (wt/same-window? window root-window)
+      (let [new-width (/ (:width root-window) 2)
+            buf (b/make-buffer "*new*")
+            new-window (assoc (make-window buf new-width (:height root-window)) :parent root-window)
+            updated-window (assoc root-window :width new-width)
+            container (make-container :vertical
+                                      [updated-window new-window]
+                                      (:width root-window)
+                                      (:height root-window))]
+        (make-frame (update-window-positions container 0 0) (:width frame) (:height frame)))
       frame)))
 
 
