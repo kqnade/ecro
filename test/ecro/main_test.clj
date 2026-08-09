@@ -3,6 +3,7 @@
     [clojure.java.io :as io]
     [clojure.test :refer :all]
     [ecro.buffer :as b]
+    [ecro.key :as key]
     [ecro.kill-ring :as kr]
     [ecro.main :as main]))
 
@@ -336,8 +337,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          ;; Shift+Right (code 1004, modifiers with Shift=4)
-          new-state (main/handle-key state 1004 5)]
+          new-state (main/handle-key state key/right-key-code 5)]
       (is (= 2 (:mark (:current-buffer new-state))))
       (is (= 3 (:point (:current-buffer new-state))))
       (is (= "l" (b/region-text (:current-buffer new-state)))))))
@@ -357,8 +357,8 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          selected (main/handle-key state 1004 5)
-          moved (main/handle-key selected 1004 0)]
+          selected (main/handle-key state key/right-key-code 5)
+          moved (main/handle-key selected key/right-key-code 0)]
       (is (= 2 (:mark (:current-buffer selected))))
       (is (nil? (:mark (:current-buffer moved))))
       (is (= 4 (:point (:current-buffer moved)))))))
