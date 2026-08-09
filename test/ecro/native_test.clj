@@ -102,6 +102,28 @@
           (io/delete-file temp-dir true))))))
 
 
+(deftest native-library-next-to-executable-is-preferred
+  (testing "a distributed executable resolves its colocated Rust library"
+    (let [temp-dir (.toFile
+                     (java.nio.file.Files/createTempDirectory
+                       "ecro-native-library-test"
+                       (make-array java.nio.file.attribute.FileAttribute 0)))
+          executable (io/file temp-dir "ecro")
+          library (io/file temp-dir (System/mapLibraryName "ecro_core"))
+          resolver (ns-resolve 'ecro.native 'sibling-library-path)]
+      (try
+        (spit executable "native executable")
+        (spit library "Rust shared library")
+        (is (some? resolver) "sibling-library-path is not implemented")
+        (when resolver
+          (is (= (.getAbsolutePath library)
+                 (resolver (.getAbsolutePath executable)))))
+        (finally
+          (doseq [file [library executable]]
+            (io/delete-file file true))
+          (io/delete-file temp-dir true))))))
+
+
 (deftest test-jna-library-loaded
   (testing "JNA library is loaded or gracefully handles missing library"
     (is lib-available?)))
