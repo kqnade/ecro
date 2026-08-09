@@ -54,6 +54,18 @@
       (assoc buf :point start-point))))
 
 
+(defn isearch-repeat
+  "Repeat the current i-search from the current match in direction."
+  [state buf direction]
+  (let [pattern (:pattern state)
+        point (:point buf)
+        result (when (seq pattern)
+                 (case direction
+                   :forward (search-forward (assoc buf :point (inc point)) pattern)
+                   :backward (search-backward (assoc buf :point point) pattern)))]
+    (or result buf)))
+
+
 (defn isearch-cancel
   "Cancel i-search and restore original point."
   [state buf]

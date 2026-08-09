@@ -150,6 +150,22 @@
       (is (= 0 (get-in after-chords [:current-buffer :point]))))))
 
 
+(deftest test-incremental-search-repeat-controls
+  (testing "C-s and C-r repeat the query without entering command characters"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "foo foo foo")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \f) 0)
+          next-match (key/handle-key searched (int \s) 1)
+          previous-match (key/handle-key next-match (int \r) 1)]
+      (is (= 4 (get-in next-match [:current-buffer :point])))
+      (is (= 0 (get-in previous-match [:current-buffer :point])))
+      (is (= "f" (get-in previous-match [:isearch :pattern])))
+      (is (= :backward (get-in previous-match [:isearch :direction]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}

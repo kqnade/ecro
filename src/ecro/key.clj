@@ -135,6 +135,17 @@
       (<= 2001 key-code 2255)))
 
 
+(defn- repeat-isearch
+  [editor-state direction]
+  (let [isearch (assoc (:isearch editor-state) :direction direction)
+        buf (search/isearch-repeat isearch
+                                   (:current-buffer editor-state)
+                                   direction)]
+    (-> editor-state
+        (assoc :isearch isearch)
+        (state/assoc-current-buffer buf))))
+
+
 (defn- handle-isearch-key
   "Handle a key event while incremental search is active."
   [editor-state key-code modifiers]
@@ -155,6 +166,12 @@
       (-> editor-state
           (assoc :isearch isearch)
           (state/assoc-current-buffer buf)))
+
+    (and (= key-code (int \s)) (= modifiers control-modifier))
+    (repeat-isearch editor-state :forward)
+
+    (and (= key-code (int \r)) (= modifiers control-modifier))
+    (repeat-isearch editor-state :backward)
 
     (terminal-sentinel-key-code? key-code)
     editor-state
