@@ -16,6 +16,10 @@
        (map (comp re-pattern second))))
 
 
+(def jni-config
+  (slurp "resources/META-INF/native-image/jni-config.json"))
+
+
 (deftest jna-dispatch-libraries-are-included-in-native-image
   (testing "JNA dispatch libraries for release platforms match an included resource pattern"
     (doseq [resource ["com/sun/jna/linux-x86-64/libjnidispatch.so"
@@ -23,6 +27,46 @@
                       "com/sun/jna/darwin-aarch64/libjnidispatch.jnilib"]]
       (is (some #(re-matches % resource) resource-patterns)
           (str resource " is not included by resource-config.json")))))
+
+
+(deftest jna-core-types-are-registered-for-jni
+  (testing "JNA can resolve the Java and JNA types used by its native dispatcher"
+    (doseq [class-name ["com.sun.jna.Native"
+                        "com.sun.jna.Pointer"
+                        "com.sun.jna.Structure"
+                        "java.lang.Object"]]
+      (is (re-find (re-pattern (str "\\\"name\\\"\\s*:\\s*\\\""
+                                    (java.util.regex.Pattern/quote class-name)
+                                    "\\\""))
+                   jni-config)
+          (str class-name " is not registered in jni-config.json")))))
+
+
+(deftest ecro-native-interface-proxy-is-registered
+  (testing "JNA can create the native interface proxy in the native image"
+    (let [metadata-file (java.io.File.
+                          "resources/META-INF/native-image/reachability-metadata.json")]
+      (is (.exists metadata-file)
+          "reachability-metadata.json does not exist")
+      (when (.exists metadata-file)
+        (let [metadata (slurp metadata-file)]
+          (is (re-find #"ecro\.native\.IEcroNative" metadata)
+              "IEcroNative proxy is not registered")
+          (doseq [method-name ["ecro_disable_raw_mode"
+                               "ecro_enable_raw_mode"
+                               "ecro_enter_alternate_screen"
+                               "ecro_free_event"
+                               "ecro_get_terminal_size"
+                               "ecro_init"
+                               "ecro_leave_alternate_screen"
+                               "ecro_poll_event"
+                               "ecro_read_event"
+                               "ecro_shutdown"]]
+            (is (re-find (re-pattern (str "\\\"name\\\"\\s*:\\s*\\\""
+                                          method-name
+                                          "\\\""))
+                         metadata)
+                (str method-name " is not registered for reflection"))))))))
 
 
 (deftest test-jna-library-loaded
