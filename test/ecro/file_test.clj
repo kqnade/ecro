@@ -7,6 +7,7 @@
     (java.io
       IOException)
     (java.nio.file
+      AtomicMoveNotSupportedException
       Files
       LinkOption)
     (java.nio.file.attribute
@@ -297,6 +298,32 @@
         (finally
           (Files/deleteIfExists target-file)
           (Files/deleteIfExists target-dir)
+          (Files/deleteIfExists test-dir))))))
+
+
+(deftest test-write-file-does-not-fall-back-when-atomic-move-is-unsupported
+  (testing "an unsupported atomic move preserves the target and removes the temporary file"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_unsupported_"
+                                              (make-array FileAttribute 0))
+          test-file (.resolve test-dir "target.txt")
+          move-var (ns-resolve 'ecro.file 'move-file-atomically)]
+      (try
+        (spit (.toFile test-file) "old content")
+        (with-redefs-fn {move-var
+                         (fn [source target]
+                           (throw (AtomicMoveNotSupportedException.
+                                    (str source)
+                                    (str target)
+                                    "atomic move unavailable")))}
+          #(is (thrown? AtomicMoveNotSupportedException
+                 (f/write-file {:name "target.txt"
+                                :text "new content"
+                                :filepath (str test-file)}))))
+        (is (= "old content" (slurp (.toFile test-file))))
+        (is (= #{"target.txt"}
+               (set (seq (.list (.toFile test-dir))))))
+        (finally
+          (Files/deleteIfExists test-file)
           (Files/deleteIfExists test-dir))))))
 
 
