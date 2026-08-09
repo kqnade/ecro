@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 crossterm = "=0.29.0"
+unicode-width = "=0.2.2"

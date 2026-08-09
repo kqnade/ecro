@@ -4,6 +4,7 @@ use crossterm::ExecutableCommand;
 use crossterm::event::{
     KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
+use unicode_width::UnicodeWidthStr;
 
 static TERMINAL_STATE: Mutex<TerminalState> = Mutex::new(TerminalState::new());
 
@@ -143,6 +144,25 @@ pub unsafe extern "C" fn ecro_get_terminal_size(width: *mut i32, height: *mut i3
             }
             0
         }
+        Err(_) => -1,
+    }
+}
+
+#[unsafe(no_mangle)]
+/// Return the terminal-cell width of a UTF-8 byte slice.
+///
+/// # Safety
+///
+/// `text` must point to `length` readable bytes. The bytes must remain valid for the duration of
+/// the call.
+pub unsafe extern "C" fn ecro_display_width(text: *const u8, length: i32) -> i32 {
+    if text.is_null() || length < 0 {
+        return -1;
+    }
+
+    let bytes = unsafe { std::slice::from_raw_parts(text, length as usize) };
+    match std::str::from_utf8(bytes) {
+        Ok(text) => i32::try_from(text.width()).unwrap_or(-1),
         Err(_) => -1,
     }
 }

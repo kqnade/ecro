@@ -10,30 +10,6 @@
 (defonce screen-buffer (atom []))
 
 
-(def ^:private zero-width-character-types
-  #{Character/NON_SPACING_MARK
-    Character/ENCLOSING_MARK
-    Character/COMBINING_SPACING_MARK
-    Character/FORMAT})
-
-
-(defn- wide-code-point?
-  [code-point]
-  (or (Character/isEmojiPresentation code-point)
-      (<= 0x1100 code-point 0x115f)
-      (= code-point 0x2329)
-      (= code-point 0x232a)
-      (and (<= 0x2e80 code-point 0xa4cf)
-           (not= code-point 0x303f))
-      (<= 0xac00 code-point 0xd7a3)
-      (<= 0xf900 code-point 0xfaff)
-      (<= 0xfe10 code-point 0xfe19)
-      (<= 0xfe30 code-point 0xfe6f)
-      (<= 0xff00 code-point 0xff60)
-      (<= 0xffe0 code-point 0xffe6)
-      (<= 0x20000 code-point 0x3fffd)))
-
-
 (defn- next-code-point
   [^String text offset code-point]
   (let [next-offset (+ offset (Character/charCount code-point))]
@@ -41,28 +17,20 @@
       (.codePointAt text next-offset))))
 
 
+(defn- terminal-width
+  [text]
+  (or (native/text-width text)
+      (throw (IllegalStateException. "ecro_core is required to measure terminal text"))))
+
+
 (defn- code-point-width
   [^String text offset code-point]
-  (let [next-point (next-code-point text offset code-point)]
-    (cond
-      (or (zero? code-point)
-          (< code-point 0x20)
-          (<= 0x7f code-point 0x9f)
-          (contains? zero-width-character-types (Character/getType code-point))
-          (Character/isEmojiModifier code-point))
-      0
-
-      (and (Character/isEmoji code-point)
-           (= next-point 0xfe0e))
-      1
-
-      (or (wide-code-point? code-point)
-          (and (Character/isEmoji code-point)
-               (= next-point 0xfe0f)))
-      2
-
-      :else
-      1)))
+  (let [code-point-end (+ offset (Character/charCount code-point))
+        next-point (next-code-point text offset code-point)
+        presentation-end (if (#{0xfe0e 0xfe0f} next-point)
+                           (+ code-point-end (Character/charCount next-point))
+                           code-point-end)]
+    (terminal-width (subs text offset presentation-end))))
 
 
 (defn- ansi-csi-end
