@@ -113,3 +113,18 @@
                                                    (b/insert-char current-buffer \a))]
       (is (= (:current-buffer edited-state)
              (:buffer (window/selected-window (:frame edited-state))))))))
+
+
+(deftest test-select-window-updates-current-buffer
+  (testing "selecting a window updates current buffer and buffer list"
+    (let [editor-state (state/initial-state {})
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          target-window (second (window/get-windows split-frame))
+          state-with-split (assoc editor-state :frame split-frame)
+          selected-state (state/select-window state-with-split target-window)]
+      (is (= (:buffer target-window) (:current-buffer selected-state)))
+      (is (= (:current-buffer selected-state)
+             (:buffer (window/selected-window (:frame selected-state)))))
+      (is (some #(= (:name (:buffer target-window)) (:name %))
+                (:buffers selected-state))))))

@@ -45,6 +45,17 @@
       (:frame state') (update :frame window/assoc-selected-buffer buf))))
 
 
+(defn select-window
+  "Select a frame window and synchronize its buffer with editor state."
+  [state target-window]
+  (let [frame (window/select-window (:frame state) target-window)
+        selected-window (window/selected-window frame)]
+    (if (and (:id target-window)
+             (= (:id target-window) (:id selected-window)))
+      (assoc-current-buffer (assoc state :frame frame) (:buffer selected-window))
+      state)))
+
+
 (defn switch-to-buffer
   "Switch current buffer by name. Creates new buffer if not found."
   [state name]
