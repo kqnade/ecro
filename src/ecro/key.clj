@@ -17,9 +17,13 @@
 (def shift-modifier 4)
 
 
+(def ^:private function-key-base
+  (inc Character/MAX_CODE_POINT))
+
+
 (defn- function-key-code?
   [key-code]
-  (<= 2000 key-code 2255))
+  (<= function-key-base key-code (+ function-key-base 255)))
 
 
 (defn- printable-key-code?

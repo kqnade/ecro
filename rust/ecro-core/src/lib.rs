@@ -161,6 +161,7 @@ const EVENT_RESIZE: i32 = 2;
 const MOD_CONTROL: i32 = 1;
 const MOD_ALT: i32 = 2;
 const MOD_SHIFT: i32 = 4;
+const FUNCTION_KEY_BASE: i32 = 0x110000;
 
 fn encode_modifiers(modifiers: crossterm::event::KeyModifiers) -> i32 {
     let mut result = 0;
@@ -196,7 +197,7 @@ fn encode_key_event(key_event: crossterm::event::KeyEvent) -> (i32, i32) {
         KeyCode::PageDown => 1008,
         KeyCode::Insert => 1009,
         KeyCode::Delete => 1010,
-        KeyCode::F(n) => 2000 + (n as i32),
+        KeyCode::F(n) => FUNCTION_KEY_BASE + (n as i32),
         _ => 0,
     };
 
@@ -353,5 +354,13 @@ mod tests {
         let (code, modifiers) = encode_key_event(event);
         assert_eq!(code, 'i' as i32);
         assert_eq!(modifiers, MOD_CONTROL);
+    }
+
+    #[test]
+    fn test_encode_function_key_outside_unicode_range() {
+        let event = KeyEvent::new(KeyCode::F(1), KeyModifiers::empty());
+        let (code, modifiers) = encode_key_event(event);
+        assert!(code > char::MAX as i32);
+        assert_eq!(modifiers, 0);
     }
 }
