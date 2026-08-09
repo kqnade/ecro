@@ -4,6 +4,8 @@
     [clojure.test :refer :all]
     [ecro.file :as f])
   (:import
+    (java.io
+      IOException)
     (java.nio.file
       Files
       LinkOption)
@@ -75,6 +77,28 @@
                                               (make-array LinkOption 0))))
         (finally
           (Files/deleteIfExists test-file)
+          (Files/deleteIfExists test-dir))))))
+
+
+(deftest test-write-file-cleans-up-after-replacement-failure
+  (testing "a failed atomic replacement preserves the target and removes its temporary file"
+    (let [test-dir (Files/createTempDirectory "ecro_atomic_save_failure_"
+                                              (make-array FileAttribute 0))
+          target-dir (.resolve test-dir "target.txt")
+          target-file (.resolve target-dir "existing.txt")]
+      (try
+        (Files/createDirectory target-dir (make-array FileAttribute 0))
+        (spit (.toFile target-file) "old content")
+        (is (thrown? IOException
+              (f/write-file {:name "target.txt"
+                             :text "new content"
+                             :filepath (str target-dir)})))
+        (is (= "old content" (slurp (.toFile target-file))))
+        (is (= #{"target.txt"}
+               (set (seq (.list (.toFile test-dir))))))
+        (finally
+          (Files/deleteIfExists target-file)
+          (Files/deleteIfExists target-dir)
           (Files/deleteIfExists test-dir))))))
 
 
