@@ -70,6 +70,11 @@
       (is (= 20 (count (render/screen-line line 20 2)))))))
 
 
+(deftest test-screen-line-uses-terminal-cell-width
+  (testing "wide characters advance tab stops by two terminal cells"
+    (is (= "日  本" (render/screen-line "日\t本" 6 4)))))
+
+
 (deftest test-status-line-shows-skk-mode
   (testing "status line shows SKK hiragana mode"
     (let [buf (-> (b/make-buffer "test")

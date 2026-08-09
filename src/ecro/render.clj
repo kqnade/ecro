@@ -10,6 +10,83 @@
 (defonce screen-buffer (atom []))
 
 
+(def ^:private zero-width-character-types
+  #{Character/NON_SPACING_MARK
+    Character/ENCLOSING_MARK
+    Character/COMBINING_SPACING_MARK
+    Character/FORMAT})
+
+
+(defn- wide-code-point?
+  [code-point]
+  (or (Character/isEmojiPresentation code-point)
+      (<= 0x1100 code-point 0x115f)
+      (= code-point 0x2329)
+      (= code-point 0x232a)
+      (and (<= 0x2e80 code-point 0xa4cf)
+           (not= code-point 0x303f))
+      (<= 0xac00 code-point 0xd7a3)
+      (<= 0xf900 code-point 0xfaff)
+      (<= 0xfe10 code-point 0xfe19)
+      (<= 0xfe30 code-point 0xfe6f)
+      (<= 0xff00 code-point 0xff60)
+      (<= 0xffe0 code-point 0xffe6)
+      (<= 0x20000 code-point 0x3fffd)))
+
+
+(defn- code-point-width
+  [code-point]
+  (cond
+    (or (zero? code-point)
+        (< code-point 0x20)
+        (<= 0x7f code-point 0x9f)
+        (contains? zero-width-character-types (Character/getType code-point))
+        (Character/isEmojiModifier code-point))
+    0
+
+    (wide-code-point? code-point)
+    2
+
+    :else
+    1))
+
+
+(defn display-width
+  "Return the number of terminal cells occupied by text."
+  [^String text]
+  (loop [offset 0
+         width 0]
+    (if (< offset (count text))
+      (let [code-point (.codePointAt text offset)]
+        (recur (+ offset (Character/charCount code-point))
+               (+ width (code-point-width code-point))))
+      width)))
+
+
+(defn- truncate-to-width
+  [^String text width]
+  (let [result (StringBuilder.)]
+    (loop [offset 0
+           current-width 0]
+      (if (< offset (count text))
+        (let [code-point (.codePointAt text offset)
+              code-point-length (Character/charCount code-point)
+              next-width (+ current-width (code-point-width code-point))]
+          (if (<= next-width width)
+            (do
+              (.appendCodePoint result code-point)
+              (recur (+ offset code-point-length) next-width))
+            (str result)))
+        (str result)))))
+
+
+(defn- fit-to-width
+  [text width]
+  (let [truncated (truncate-to-width text width)
+        padding (- width (display-width truncated))]
+    (str truncated (apply str (repeat padding " ")))))
+
+
 (defn reset-screen-buffer!
   "Force the next render to redraw all lines."
   []
@@ -18,21 +95,22 @@
 
 (defn expand-tabs
   "Expand tab characters to spaces."
-  [line tab-width]
-  (loop [chars (seq line)
-         col 0
-         result ""]
-    (if (seq chars)
-      (let [ch (first chars)]
-        (if (= ch \tab)
-          (let [spaces (- tab-width (mod col tab-width))]
-            (recur (rest chars)
-                   (+ col spaces)
-                   (str result (apply str (repeat spaces " ")))))
-          (recur (rest chars)
-                 (inc col)
-                 (str result ch))))
-      result)))
+  [^String line tab-width]
+  (let [result (StringBuilder.)]
+    (loop [offset 0
+           col 0]
+      (if (< offset (count line))
+        (let [code-point (.codePointAt line offset)
+              code-point-length (Character/charCount code-point)]
+          (if (= code-point (int \tab))
+            (let [spaces (- tab-width (mod col tab-width))]
+              (.append result (apply str (repeat spaces " ")))
+              (recur (+ offset code-point-length) (+ col spaces)))
+            (do
+              (.appendCodePoint result code-point)
+              (recur (+ offset code-point-length)
+                     (+ col (code-point-width code-point))))))
+        (str result)))))
 
 
 (defn update-screen-line
@@ -40,7 +118,7 @@
   [y old-line new-line width]
   (let [old (or old-line "")
         expanded (expand-tabs new-line 8)
-        new (subs (format (str "%-" width "s") expanded) 0 width)]
+        new (fit-to-width expanded width)]
     (when (not= old new)
       (print (str "\033[" (inc y) ";1H" new)))))
 
@@ -49,7 +127,7 @@
   "Return the exact rendered line stored in the diff buffer."
   [line width tab-width]
   (let [expanded (expand-tabs line tab-width)]
-    (subs (format (str "%-" width "s") expanded) 0 width)))
+    (fit-to-width expanded width)))
 
 
 (defn status-line
