@@ -59,6 +59,19 @@
           (is (str/includes? out "hello world")))))))
 
 
+(deftest test-render-cursor-uses-terminal-cell-width
+  (testing "cursor position accounts for wide characters before point"
+    (let [buf (assoc (b/make-buffer "test")
+                     :text "日本"
+                     :point 1
+                     :saved-text "日本")
+          state {:current-buffer buf :key-sequence []}]
+      (with-redefs [native/get-terminal-size (fn [] [10 3])]
+        (render/reset-screen-buffer!)
+        (let [out (with-out-str (render/render state))]
+          (is (str/includes? out "\033[1;3H\033[?25h")))))))
+
+
 (deftest test-status-line-truncated-to-width
   (testing "status line is truncated to given width"
     (let [state {:current-buffer (assoc (b/make-buffer "test")

@@ -218,7 +218,7 @@
           line-start (reduce + (map #(inc (count %)) (take line-num lines)))
           col-in-line (- point line-start)
           line-prefix (subs line-text 0 (max 0 (min col-in-line (count line-text))))
-          visual-col (count (expand-tabs line-prefix tab-width))
+          visual-col (display-width (expand-tabs line-prefix tab-width))
           screen-row (- line-num scroll-line)]
       (print (str "\033[" (inc (max 0 screen-row)) ";" (inc visual-col) "H\033[?25h")))
     (flush)
