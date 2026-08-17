@@ -144,7 +144,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-clojure-
 
       - name: Install cbindgen
-        run: cargo install cbindgen
+        run: cargo install --force cbindgen
 
       - name: Build native image
         run: ./script/build-native.sh
