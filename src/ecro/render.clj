@@ -95,7 +95,10 @@
                 (when sgr-active?
                   (.append result "\033[0m"))
                 (str result)))))
-        (str result)))))
+        (do
+          (when sgr-active?
+            (.append result "\033[0m"))
+          (str result))))))
 
 
 (defn- fit-to-width

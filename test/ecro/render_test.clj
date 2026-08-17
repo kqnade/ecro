@@ -94,6 +94,12 @@
     (is (= "日  本" (render/screen-line "日\t本" 6 4)))))
 
 
+(deftest test-screen-line-resets-trailing-sgr-at-exact-width
+  (testing "an active SGR is reset after normal exact-width end-of-input"
+    (is (= "\033[31mabc\033[0m"
+           (render/screen-line "\033[31mabc" 3 2)))))
+
+
 (deftest test-display-width-honors-emoji-presentation-selector
   (testing "VS16 selects a two-cell emoji presentation"
     (is (= 2 (render/display-width "❤️")))))
