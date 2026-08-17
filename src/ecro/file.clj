@@ -1,7 +1,115 @@
 (ns ecro.file
   (:require
     [clojure.java.io :as io]
-    [ecro.buffer :as b]))
+    [ecro.buffer :as b])
+  (:import
+    (java.nio.file
+      CopyOption
+      FileSystemLoopException
+      Files
+      LinkOption
+      StandardCopyOption)
+    (java.nio.file.attribute
+      AclFileAttributeView
+      FileAttribute
+      PosixFileAttributeView
+      PosixFilePermissions)
+    (java.util
+      UUID)))
+
+
+(defn- file-attribute-view
+  [path attribute-view-class]
+  (Files/getFileAttributeView path
+                              attribute-view-class
+                              (make-array LinkOption 0)))
+
+
+(defn- posix-attribute-view
+  [path]
+  (file-attribute-view path PosixFileAttributeView))
+
+
+(defn- acl-attribute-view
+  [path]
+  (file-attribute-view path AclFileAttributeView))
+
+
+(defn- preserve-posix-attributes
+  [source target]
+  (when (Files/exists source (make-array LinkOption 0))
+    (when-let [source-view (posix-attribute-view source)]
+      (when-let [target-view (posix-attribute-view target)]
+        (let [attributes (.readAttributes source-view)]
+          (.setGroup target-view (.group attributes))
+          (.setPermissions target-view (.permissions attributes))
+          (.setOwner target-view (.owner attributes)))))))
+
+
+(defn- preserve-acl-attributes
+  [source target]
+  (when (Files/exists source (make-array LinkOption 0))
+    (when-let [source-view (acl-attribute-view source)]
+      (when-let [target-view (acl-attribute-view target)]
+        (.setAcl target-view (.getAcl source-view))
+        (.setOwner target-view (.getOwner source-view))))))
+
+
+(defn- initial-temp-file-attributes
+  [target]
+  (if (Files/exists target (make-array LinkOption 0))
+    (if-let [attribute-view (posix-attribute-view target)]
+      (into-array FileAttribute
+                  [(PosixFilePermissions/asFileAttribute
+                     (.permissions (.readAttributes attribute-view)))])
+      (make-array FileAttribute 0))
+    (make-array FileAttribute 0)))
+
+
+(defn- create-save-temp-file
+  [target]
+  (Files/createFile (.resolve (.getParent target)
+                              (str ".ecro-"
+                                   (UUID/randomUUID)
+                                   ".tmp"))
+                    (initial-temp-file-attributes target)))
+
+
+(defn- resolve-save-target
+  [filepath]
+  (loop [target (-> filepath io/file .toPath .toAbsolutePath .normalize)
+         seen #{}]
+    (if (Files/isSymbolicLink target)
+      (if (contains? seen target)
+        (throw (FileSystemLoopException. (str target)))
+        (let [referent (Files/readSymbolicLink target)
+              resolved (if (.isAbsolute referent)
+                         referent
+                         (.resolve (.getParent target) referent))]
+          (recur (.normalize resolved) (conj seen target))))
+      target)))
+
+
+(defn- move-file-atomically
+  "Replace target atomically or throw; never fall back to a non-atomic move."
+  [source target]
+  (Files/move source
+              target
+              (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                      StandardCopyOption/REPLACE_EXISTING])))
+
+
+(defn- atomic-spit
+  [filepath text]
+  (let [target (resolve-save-target filepath)
+        temp-file (create-save-temp-file target)]
+    (try
+      (preserve-posix-attributes target temp-file)
+      (preserve-acl-attributes target temp-file)
+      (spit (.toFile temp-file) text)
+      (move-file-atomically temp-file target)
+      (finally
+        (Files/deleteIfExists temp-file)))))
 
 
 (defn read-file
@@ -23,7 +131,7 @@
   "Write buffer content to its filepath. Returns nil if no filepath."
   [buf]
   (when-let [filepath (:filepath buf)]
-    (spit filepath (:text buf))
+    (atomic-spit filepath (:text buf))
     buf))
 
 
@@ -42,7 +150,7 @@
 (defn write-file-as
   "Write buffer content to a new filepath and update buffer's filepath and name."
   [buf filepath]
-  (spit filepath (:text buf))
+  (atomic-spit filepath (:text buf))
   (assoc buf
          :filepath filepath
          :name (.getName (io/file filepath))
