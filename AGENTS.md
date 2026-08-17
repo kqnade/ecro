@@ -70,7 +70,7 @@ Use [Gitmoji](https://gitmoji.dev/) for all commits.
 | ⚡️ | `perf:` | performance improvement |
 | 🔥 | `remove:` | remove code/files |
 
-**Do NOT sign commits.** Use `git commit` without GPG signing.
+**Sign commits.** Use Git's configured commit-signing method, and do not disable signing.
 
 ## Architecture
 
