@@ -84,11 +84,16 @@
           children (:children window)
           total-size (if (= :vertical direction) (:width window) (:height window))
           child-size (/ total-size (count children))
+          child-width (if (= :vertical direction) child-size (:width window))
+          child-height (if (= :horizontal direction) child-size (:height window))
           updated-children (map-indexed
                              (fn [idx child]
-                               (if (= :vertical direction)
-                                 (update-window-positions child top (+ left (* idx child-size)))
-                                 (update-window-positions child (+ top (* idx child-size)) left)))
+                               (let [resized-child (assoc child
+                                                          :width child-width
+                                                          :height child-height)]
+                                 (if (= :vertical direction)
+                                   (update-window-positions resized-child top (+ left (* idx child-size)))
+                                   (update-window-positions resized-child (+ top (* idx child-size)) left))))
                              children)]
       (assoc window :children updated-children))))
 

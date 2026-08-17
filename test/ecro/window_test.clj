@@ -212,6 +212,32 @@
       (is (= 40 (:height (:root-window resized)))))))
 
 
+(deftest test-frame-resize-updates-vertical-split-layout
+  (testing "resizing a vertical split updates child dimensions and positions"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          resized-frame (w/resize-frame split-frame 100 40)
+          [left-window right-window] (w/get-windows resized-frame)]
+      (is (= [50 50] (mapv :width [left-window right-window])))
+      (is (= [40 40] (mapv :height [left-window right-window])))
+      (is (= [0 50] (mapv :left [left-window right-window])))
+      (is (= [0 0] (mapv :top [left-window right-window]))))))
+
+
+(deftest test-frame-resize-updates-horizontal-split-layout
+  (testing "resizing a horizontal split updates child dimensions and positions"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-horizontal frame (:root-window frame))
+          resized-frame (w/resize-frame split-frame 100 40)
+          [top-window bottom-window] (w/get-windows resized-frame)]
+      (is (= [100 100] (mapv :width [top-window bottom-window])))
+      (is (= [20 20] (mapv :height [top-window bottom-window])))
+      (is (= [0 0] (mapv :left [top-window bottom-window])))
+      (is (= [0 20] (mapv :top [top-window bottom-window]))))))
+
+
 (deftest test-frame-resize-preserves-selected-window
   (testing "resizing a split frame preserves its selected window"
     (let [buf (b/make-buffer "test")
