@@ -86,6 +86,23 @@
       (is (= 0 (:point buf))))))
 
 
+(deftest test-supplementary-character-boundaries
+  (testing "movement, deletion, and undo keep point outside surrogate pairs"
+    (let [buf (assoc (b/make-buffer "test") :text "😀a")
+          after-emoji (b/move-point-forward buf)
+          before-emoji (-> (assoc buf :point 3)
+                           (b/move-point-backward)
+                           (b/move-point-backward))
+          deleted-forward (b/delete-char-forward buf)
+          deleted-backward (b/delete-char-backward after-emoji)
+          restored (undo/undo deleted-backward)]
+      (is (= 2 (:point after-emoji)))
+      (is (= 0 (:point before-emoji)))
+      (is (= ["a" 0] ((juxt :text :point) deleted-forward)))
+      (is (= ["a" 0] ((juxt :text :point) deleted-backward)))
+      (is (= ["😀a" 2] ((juxt :text :point) restored))))))
+
+
 (deftest test-line-column-coordinates
   (testing "line and column from point"
     (let [buf (-> (b/make-buffer "test")

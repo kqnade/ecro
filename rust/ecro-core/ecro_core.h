@@ -29,6 +29,24 @@ int32_t ecro_leave_alternate_screen();
 /// `width` and `height` must be valid writable pointers to `i32` values.
 int32_t ecro_get_terminal_size(int32_t *width, int32_t *height);
 
+/// Return the terminal-cell width of a UTF-8 byte slice.
+///
+/// # Safety
+///
+/// `text` must point to `length` readable bytes. The bytes must remain valid for the duration of
+/// the call.
+int32_t ecro_display_width(const uint8_t *text, int32_t length);
+
+/// Return the UTF-16 length of the longest grapheme-aligned prefix within `maximum_width` cells.
+///
+/// # Safety
+///
+/// `text` must point to `length` readable bytes. The bytes must remain valid for the duration of
+/// the call.
+int32_t ecro_prefix_utf16_length_for_width(const uint8_t *text,
+                                           int32_t length,
+                                           int32_t maximum_width);
+
 ecro_EcroEvent *ecro_poll_event();
 
 ecro_EcroEvent *ecro_read_event();

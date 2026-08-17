@@ -41,6 +41,12 @@
       (is (not (str/includes? rendered "\033[7m"))))))
 
 
+(deftest test-render-line-with-region-fits-visible-width
+  (testing "ANSI region highlighting does not consume terminal cells"
+    (is (= "\033[7mhello\033[0m world"
+           (#'render/render-line-with-region "hello world" 0 [0 5] 11 2)))))
+
+
 (deftest test-render-screen-buffer-keeps-region-state
   (testing "screen-buffer stores highlighted lines so clearing mark redraws them"
     (let [marked-buf (assoc (b/make-buffer "test")
@@ -59,6 +65,19 @@
           (is (str/includes? out "hello world")))))))
 
 
+(deftest test-render-cursor-uses-terminal-cell-width
+  (testing "cursor position accounts for wide characters before point"
+    (let [buf (assoc (b/make-buffer "test")
+                     :text "日本"
+                     :point 1
+                     :saved-text "日本")
+          state {:current-buffer buf :key-sequence []}]
+      (with-redefs [native/get-terminal-size (fn [] [10 3])]
+        (render/reset-screen-buffer!)
+        (let [out (with-out-str (render/render state))]
+          (is (str/includes? out "\033[1;3H\033[?25h")))))))
+
+
 (deftest test-status-line-truncated-to-width
   (testing "status line is truncated to given width"
     (let [state {:current-buffer (assoc (b/make-buffer "test")
@@ -68,6 +87,30 @@
           line (render/status-line state)]
       (is (= 10 (count (render/screen-line line 10 2))))
       (is (= 20 (count (render/screen-line line 20 2)))))))
+
+
+(deftest test-screen-line-uses-terminal-cell-width
+  (testing "wide characters advance tab stops by two terminal cells"
+    (is (= "日  本" (render/screen-line "日\t本" 6 4)))))
+
+
+(deftest test-screen-line-resets-trailing-sgr-at-exact-width
+  (testing "an active SGR is reset after normal exact-width end-of-input"
+    (is (= "\033[31mabc\033[0m"
+           (render/screen-line "\033[31mabc" 3 2)))))
+
+
+(deftest test-display-width-honors-emoji-presentation-selector
+  (testing "VS16 selects a two-cell emoji presentation"
+    (is (= 2 (render/display-width "❤️")))))
+
+
+(deftest test-rendering-treats-emoji-sequences-as-single-graphemes
+  (testing "fully-qualified ZWJ and flag sequences occupy two cells atomically"
+    (doseq [emoji ["👨‍👩‍👧‍👦" "🇯🇵"]]
+      (is (= 2 (render/display-width emoji)))
+      (is (= emoji (render/screen-line emoji 2 2)))
+      (is (= " " (render/screen-line emoji 1 2))))))
 
 
 (deftest test-status-line-shows-skk-mode

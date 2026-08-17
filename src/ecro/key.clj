@@ -8,13 +8,67 @@
     [ecro.native :as native]
     [ecro.render :as render]
     [ecro.scroll :as scroll]
+    [ecro.search :as search]
     [ecro.skk.input :as skk-input]
     [ecro.skk.sources :as skk-sources]
     [ecro.skk.state :as skk-state]
     [ecro.state :as state]))
 
 
+(def control-modifier 1)
+
+
+(def alt-modifier 2)
+
+
 (def shift-modifier 4)
+
+
+(def ^:private function-key-base
+  (inc Character/MAX_CODE_POINT))
+
+
+(def ^:private special-key-base
+  (+ function-key-base 0x100))
+
+
+(def up-key-code (+ special-key-base 1))
+(def down-key-code (+ special-key-base 2))
+(def left-key-code (+ special-key-base 3))
+(def right-key-code (+ special-key-base 4))
+(def home-key-code (+ special-key-base 5))
+(def end-key-code (+ special-key-base 6))
+(def page-up-key-code (+ special-key-base 7))
+(def page-down-key-code (+ special-key-base 8))
+(def insert-key-code (+ special-key-base 9))
+(def delete-key-code (+ special-key-base 10))
+
+
+(defn- function-key-code?
+  [key-code]
+  (<= function-key-base key-code (+ function-key-base 255)))
+
+
+(defn- special-key-code?
+  [key-code]
+  (<= up-key-code key-code delete-key-code))
+
+
+(defn- synthetic-key-code?
+  [key-code]
+  (or (function-key-code? key-code)
+      (special-key-code? key-code)))
+
+
+(defn- printable-key-code?
+  [key-code]
+  (and (Character/isValidCodePoint key-code)
+       (not (Character/isISOControl key-code))))
+
+
+(defn- key-code->string
+  [key-code]
+  (String. (Character/toChars key-code)))
 
 
 (defn shifted?
@@ -108,10 +162,82 @@
       (= key-code 127) ; Backspace
       (update-in state [:minibuffer :buffer] buffer/delete-char-backward)
 
-      (>= key-code 32) ; Printable char
-      (update-in state [:minibuffer :buffer] buffer/insert-char (char key-code))
+      (synthetic-key-code? key-code)
+      state
+
+      (printable-key-code? key-code)
+      (update-in state [:minibuffer :buffer] buffer/insert-text (key-code->string key-code))
 
       :else state)))
+
+
+(defn- code-point-string
+  "Convert a valid Unicode code point to a string."
+  [key-code]
+  (when (Character/isValidCodePoint key-code)
+    (String. (Character/toChars key-code))))
+
+
+(defn- terminal-sentinel-key-code?
+  "Return true for non-character key codes reserved by the terminal adapter."
+  [key-code]
+  (or (<= 1001 key-code 1010)
+      (<= 2001 key-code 2255)))
+
+
+(defn- repeat-isearch
+  [editor-state direction]
+  (let [isearch (assoc (:isearch editor-state) :direction direction)
+        buf (search/isearch-repeat isearch
+                                   (:current-buffer editor-state)
+                                   direction)
+        isearch (assoc isearch :anchor-point (:point buf))]
+    (-> editor-state
+        (assoc :isearch isearch)
+        (state/assoc-current-buffer buf))))
+
+
+(defn- handle-isearch-key
+  "Handle a key event while incremental search is active."
+  [editor-state key-code modifiers]
+  (cond
+    (= key-code 13)
+    (dissoc editor-state :isearch)
+
+    (= key-code 27)
+    (let [buf (search/isearch-cancel (:isearch editor-state)
+                                     (:current-buffer editor-state))]
+      (-> editor-state
+          (dissoc :isearch)
+          (state/assoc-current-buffer buf)))
+
+    (= key-code 127)
+    (let [isearch (search/isearch-delete-char (:isearch editor-state))
+          buf (search/isearch-execute isearch (:current-buffer editor-state))]
+      (-> editor-state
+          (assoc :isearch isearch)
+          (state/assoc-current-buffer buf)))
+
+    (and (= key-code (int \s)) (= modifiers control-modifier))
+    (repeat-isearch editor-state :forward)
+
+    (and (= key-code (int \r)) (= modifiers control-modifier))
+    (repeat-isearch editor-state :backward)
+
+    (terminal-sentinel-key-code? key-code)
+    editor-state
+
+    (and (>= key-code 32)
+         (zero? (bit-and modifiers (bit-or control-modifier alt-modifier))))
+    (if-let [text (code-point-string key-code)]
+      (let [isearch (search/isearch-add-char (:isearch editor-state) text)
+            buf (search/isearch-execute isearch (:current-buffer editor-state))]
+        (-> editor-state
+            (assoc :isearch isearch)
+            (state/assoc-current-buffer buf)))
+      editor-state)
+
+    :else editor-state))
 
 
 (defn- skk-active?
@@ -152,43 +278,43 @@
           result (keymap/lookup-key (:keymap editor-state) new-seq)]
       (handle-prefix-result editor-state new-seq result))
 
-    (= key-code 1001)
+    (= key-code up-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/previous-line (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1002)
+    (= key-code down-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/next-line (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1003)
+    (= key-code left-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/backward-char (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1004)
+    (= key-code right-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/forward-char (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1005)
+    (= key-code home-key-code)
     (state/assoc-current-buffer editor-state (core/move-beginning-of-line (:current-buffer editor-state)))
 
-    (= key-code 1006)
+    (= key-code end-key-code)
     (state/assoc-current-buffer editor-state (core/move-end-of-line (:current-buffer editor-state)))
 
-    (= key-code 1007)
+    (= key-code page-up-key-code)
     (let [[_ h] (or (native/get-terminal-size) [80 24])]
       (state/assoc-current-buffer editor-state (scroll/scroll-up (:current-buffer editor-state) (dec h))))
 
-    (= key-code 1008)
+    (= key-code page-down-key-code)
     (let [[_ h] (or (native/get-terminal-size) [80 24])]
       (state/assoc-current-buffer editor-state (scroll/scroll-down (:current-buffer editor-state) (dec h))))
 
-    (= key-code 1009)
+    (= key-code insert-key-code)
     editor-state
 
-    (= key-code 1010)
+    (= key-code delete-key-code)
     (state/assoc-current-buffer editor-state (buffer/delete-char-forward (:current-buffer editor-state)))
 
-    (>= key-code 2000)
+    (function-key-code? key-code)
     editor-state
 
     :else
@@ -201,9 +327,10 @@
 
         (nil? result)
         (if (and (empty? (:key-sequence editor-state))
-                 (>= key-code 32)
-                 (< key-code 127))
-          (state/assoc-current-buffer editor-state (buffer/insert-char (:current-buffer editor-state) (char key-code)))
+                 (printable-key-code? key-code))
+          (state/assoc-current-buffer editor-state
+                                      (buffer/insert-text (:current-buffer editor-state)
+                                                          (key-code->string key-code)))
           (assoc editor-state :key-sequence []))
 
         :else
@@ -213,15 +340,17 @@
 (defn handle-key
   "Handle a key event and return updated state."
   [editor-state key-code modifiers]
-  (if (:minibuffer editor-state)
-    (handle-minibuffer-key editor-state key-code)
-    (let [key-str (key-name key-code modifiers)]
-      (if (and (skk-active? editor-state)
-               (not (seq (:key-sequence editor-state)))
-               (not (= "ESC" key-str)))
-        (or (skk-handle-key editor-state key-str key-code)
-            (handle-regular-key editor-state key-code modifiers))
-        (handle-regular-key editor-state key-code modifiers)))))
+  (if (:isearch editor-state)
+    (handle-isearch-key editor-state key-code modifiers)
+    (if (:minibuffer editor-state)
+      (handle-minibuffer-key editor-state key-code)
+      (let [key-str (key-name key-code modifiers)]
+        (if (and (skk-active? editor-state)
+                 (not (seq (:key-sequence editor-state)))
+                 (not (= "ESC" key-str)))
+          (or (skk-handle-key editor-state key-str key-code)
+              (handle-regular-key editor-state key-code modifiers))
+          (handle-regular-key editor-state key-code modifiers))))))
 
 
 (defn process-event
