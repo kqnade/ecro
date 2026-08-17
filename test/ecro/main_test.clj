@@ -5,7 +5,8 @@
     [ecro.buffer :as b]
     [ecro.key :as key]
     [ecro.kill-ring :as kr]
-    [ecro.main :as main]))
+    [ecro.main :as main]
+    [ecro.native :as native]))
 
 
 (deftest test-lead-key-configurable
@@ -33,6 +34,24 @@
       (is (contains? state :key-sequence))
       (is (contains? state :keymap))
       (is (contains? state :current-buffer)))))
+
+
+(deftest smoke-test-only-checks-native-ffi
+  (testing "--smoke-test initializes and shuts down FFI without opening the terminal UI"
+    (let [calls (atom [])
+          record (fn [call result]
+                   (swap! calls conj call)
+                   result)]
+      (with-redefs [native/init #(record :init 0)
+                    native/shutdown #(record :shutdown 0)
+                    native/enable-raw-mode #(record :enable-raw-mode 0)
+                    native/disable-raw-mode #(record :disable-raw-mode 0)
+                    native/enter-alternate-screen #(record :enter-alternate-screen 0)
+                    native/leave-alternate-screen #(record :leave-alternate-screen 0)
+                    native/read-event (constantly nil)
+                    main/render (constantly nil)]
+        (main/-main "--smoke-test"))
+      (is (= [:init :shutdown] @calls)))))
 
 
 (deftest test-kill-line-integration

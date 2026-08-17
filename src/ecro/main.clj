@@ -64,26 +64,41 @@
 (def process-event key/process-event)
 
 
+(defn smoke-test
+  "Verify that the Rust terminal adapter can be initialized and shut down."
+  []
+  (let [init-result (native/init)]
+    (when-not (= 0 init-result)
+      (throw (IllegalStateException.
+               (str "Native smoke test initialization failed: " init-result)))))
+  (let [shutdown-result (native/shutdown)]
+    (when-not (= 0 shutdown-result)
+      (throw (IllegalStateException.
+               (str "Native smoke test shutdown failed: " shutdown-result))))))
+
+
 (defn -main
   "Main entry point for ecro editor."
   [& args]
-  (try
-    (native/init)
-    (native/enable-raw-mode)
-    (native/enter-alternate-screen)
+  (if (= ["--smoke-test"] args)
+    (smoke-test)
+    (try
+      (native/init)
+      (native/enable-raw-mode)
+      (native/enter-alternate-screen)
 
-    (let [state (atom (state/initial-state default-keymap))]
-      (render @state)
+      (let [state (atom (state/initial-state default-keymap))]
+        (render @state)
 
-      (loop [last-state @state]
-        (when (:running last-state)
-          (let [event (native/read-event)]
-            (when event
-              (let [new-state (swap! state process-event event)]
-                (render new-state)
-                (recur new-state)))))))
+        (loop [last-state @state]
+          (when (:running last-state)
+            (let [event (native/read-event)]
+              (when event
+                (let [new-state (swap! state process-event event)]
+                  (render new-state)
+                  (recur new-state)))))))
 
-    (finally
-      (native/leave-alternate-screen)
-      (native/disable-raw-mode)
-      (native/shutdown))))
+      (finally
+        (native/leave-alternate-screen)
+        (native/disable-raw-mode)
+        (native/shutdown)))))

@@ -1,4 +1,6 @@
 (ns ecro.native
+  (:require
+    [clojure.java.io :as io])
   (:import
     (com.sun.jna
       Library
@@ -48,13 +50,44 @@
             [ecro_free_event [com.sun.jna.Pointer] void]])
 
 
+(defn executable-path
+  "Return the path of the current JVM or native-image executable."
+  []
+  (let [^java.lang.ProcessHandle process (java.lang.ProcessHandle/current)
+        ^java.lang.ProcessHandle$Info info (.info process)
+        ^java.util.Optional command (.command info)]
+    (.orElse command nil)))
+
+
+(defn sibling-library-path
+  "Return the Rust library next to an executable when it exists."
+  [executable]
+  (when executable
+    (let [executable-file (.getAbsoluteFile (io/file executable))
+          library-file (io/file (.getParentFile executable-file)
+                                (System/mapLibraryName "ecro_core"))]
+      (when (.isFile library-file)
+        (.getAbsolutePath library-file)))))
+
+
+(defn load-native-library
+  "Load the required Rust sidecar or fail with an actionable diagnostic."
+  [library]
+  (try
+    (Native/loadLibrary library (Class/forName "ecro.native.IEcroNative"))
+    (catch LinkageError error
+      (throw
+        (IllegalStateException.
+          (str "Required Rust sidecar could not be loaded: " library
+               ". Place " (System/mapLibraryName "ecro_core")
+               " next to the ecro executable.")
+          error)))))
+
+
 (defonce ecro-lib
   (delay
-    (try
-      (Native/loadLibrary "ecro_core" (Class/forName "ecro.native.IEcroNative"))
-      (catch Exception e
-        (println "Warning: Could not load ecro_core library:" (.getMessage e))
-        nil))))
+    (load-native-library (or (sibling-library-path (executable-path))
+                             "ecro_core"))))
 
 
 (defn init
