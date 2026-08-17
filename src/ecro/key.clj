@@ -17,6 +17,53 @@
 (def shift-modifier 4)
 
 
+(def ^:private function-key-base
+  (inc Character/MAX_CODE_POINT))
+
+
+(def ^:private special-key-base
+  (+ function-key-base 0x100))
+
+
+(def up-key-code (+ special-key-base 1))
+(def down-key-code (+ special-key-base 2))
+(def left-key-code (+ special-key-base 3))
+(def right-key-code (+ special-key-base 4))
+(def home-key-code (+ special-key-base 5))
+(def end-key-code (+ special-key-base 6))
+(def page-up-key-code (+ special-key-base 7))
+(def page-down-key-code (+ special-key-base 8))
+(def insert-key-code (+ special-key-base 9))
+(def delete-key-code (+ special-key-base 10))
+
+
+(defn- function-key-code?
+  [key-code]
+  (<= function-key-base key-code (+ function-key-base 255)))
+
+
+(defn- special-key-code?
+  [key-code]
+  (<= up-key-code key-code delete-key-code))
+
+
+(defn- synthetic-key-code?
+  [key-code]
+  (or (function-key-code? key-code)
+      (special-key-code? key-code)))
+
+
+(defn- printable-key-code?
+  [key-code]
+  (and (Character/isValidCodePoint key-code)
+       (not (Character/isISOControl key-code))))
+
+
+(defn- key-code->string
+  [key-code]
+  (String. (Character/toChars key-code)))
+
+
 (defn shifted?
   [modifiers]
   (pos? (bit-and modifiers shift-modifier)))
@@ -108,8 +155,11 @@
       (= key-code 127) ; Backspace
       (update-in state [:minibuffer :buffer] buffer/delete-char-backward)
 
-      (>= key-code 32) ; Printable char
-      (update-in state [:minibuffer :buffer] buffer/insert-char (char key-code))
+      (synthetic-key-code? key-code)
+      state
+
+      (printable-key-code? key-code)
+      (update-in state [:minibuffer :buffer] buffer/insert-text (key-code->string key-code))
 
       :else state)))
 
@@ -152,43 +202,43 @@
           result (keymap/lookup-key (:keymap editor-state) new-seq)]
       (handle-prefix-result editor-state new-seq result))
 
-    (= key-code 1001)
+    (= key-code up-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/previous-line (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1002)
+    (= key-code down-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/next-line (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1003)
+    (= key-code left-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/backward-char (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1004)
+    (= key-code right-key-code)
     (state/assoc-current-buffer editor-state
                                 (core/forward-char (prepare-selection (:current-buffer editor-state) modifiers)))
 
-    (= key-code 1005)
+    (= key-code home-key-code)
     (state/assoc-current-buffer editor-state (core/move-beginning-of-line (:current-buffer editor-state)))
 
-    (= key-code 1006)
+    (= key-code end-key-code)
     (state/assoc-current-buffer editor-state (core/move-end-of-line (:current-buffer editor-state)))
 
-    (= key-code 1007)
+    (= key-code page-up-key-code)
     (let [[_ h] (or (native/get-terminal-size) [80 24])]
       (state/assoc-current-buffer editor-state (scroll/scroll-up (:current-buffer editor-state) (dec h))))
 
-    (= key-code 1008)
+    (= key-code page-down-key-code)
     (let [[_ h] (or (native/get-terminal-size) [80 24])]
       (state/assoc-current-buffer editor-state (scroll/scroll-down (:current-buffer editor-state) (dec h))))
 
-    (= key-code 1009)
+    (= key-code insert-key-code)
     editor-state
 
-    (= key-code 1010)
+    (= key-code delete-key-code)
     (state/assoc-current-buffer editor-state (buffer/delete-char-forward (:current-buffer editor-state)))
 
-    (>= key-code 2000)
+    (function-key-code? key-code)
     editor-state
 
     :else
@@ -201,9 +251,10 @@
 
         (nil? result)
         (if (and (empty? (:key-sequence editor-state))
-                 (>= key-code 32)
-                 (< key-code 127))
-          (state/assoc-current-buffer editor-state (buffer/insert-char (:current-buffer editor-state) (char key-code)))
+                 (printable-key-code? key-code))
+          (state/assoc-current-buffer editor-state
+                                      (buffer/insert-text (:current-buffer editor-state)
+                                                          (key-code->string key-code)))
           (assoc editor-state :key-sequence []))
 
         :else

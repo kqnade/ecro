@@ -4,6 +4,8 @@ use crossterm::ExecutableCommand;
 use crossterm::event::{
     KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 static TERMINAL_STATE: Mutex<TerminalState> = Mutex::new(TerminalState::new());
 
@@ -147,6 +149,60 @@ pub unsafe extern "C" fn ecro_get_terminal_size(width: *mut i32, height: *mut i3
     }
 }
 
+#[unsafe(no_mangle)]
+/// Return the terminal-cell width of a UTF-8 byte slice.
+///
+/// # Safety
+///
+/// `text` must point to `length` readable bytes. The bytes must remain valid for the duration of
+/// the call.
+pub unsafe extern "C" fn ecro_display_width(text: *const u8, length: i32) -> i32 {
+    if text.is_null() || length < 0 {
+        return -1;
+    }
+
+    let bytes = unsafe { std::slice::from_raw_parts(text, length as usize) };
+    match std::str::from_utf8(bytes) {
+        Ok(text) => i32::try_from(text.width()).unwrap_or(-1),
+        Err(_) => -1,
+    }
+}
+
+#[unsafe(no_mangle)]
+/// Return the UTF-16 length of the longest grapheme-aligned prefix within `maximum_width` cells.
+///
+/// # Safety
+///
+/// `text` must point to `length` readable bytes. The bytes must remain valid for the duration of
+/// the call.
+pub unsafe extern "C" fn ecro_prefix_utf16_length_for_width(
+    text: *const u8,
+    length: i32,
+    maximum_width: i32,
+) -> i32 {
+    if text.is_null() || length < 0 || maximum_width < 0 {
+        return -1;
+    }
+
+    let bytes = unsafe { std::slice::from_raw_parts(text, length as usize) };
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return -1;
+    };
+
+    let mut current_width = 0;
+    let mut utf16_length = 0;
+    for grapheme in text.graphemes(true) {
+        let grapheme_width = grapheme.width();
+        if current_width + grapheme_width > maximum_width as usize {
+            break;
+        }
+        current_width += grapheme_width;
+        utf16_length += grapheme.encode_utf16().count();
+    }
+
+    i32::try_from(utf16_length).unwrap_or(-1)
+}
+
 #[repr(C)]
 pub struct EcroEvent {
     pub event_type: i32,
@@ -161,6 +217,18 @@ const EVENT_RESIZE: i32 = 2;
 const MOD_CONTROL: i32 = 1;
 const MOD_ALT: i32 = 2;
 const MOD_SHIFT: i32 = 4;
+const FUNCTION_KEY_BASE: i32 = 0x110000;
+const SPECIAL_KEY_BASE: i32 = FUNCTION_KEY_BASE + 0x100;
+const KEY_UP: i32 = SPECIAL_KEY_BASE + 1;
+const KEY_DOWN: i32 = SPECIAL_KEY_BASE + 2;
+const KEY_LEFT: i32 = SPECIAL_KEY_BASE + 3;
+const KEY_RIGHT: i32 = SPECIAL_KEY_BASE + 4;
+const KEY_HOME: i32 = SPECIAL_KEY_BASE + 5;
+const KEY_END: i32 = SPECIAL_KEY_BASE + 6;
+const KEY_PAGE_UP: i32 = SPECIAL_KEY_BASE + 7;
+const KEY_PAGE_DOWN: i32 = SPECIAL_KEY_BASE + 8;
+const KEY_INSERT: i32 = SPECIAL_KEY_BASE + 9;
+const KEY_DELETE: i32 = SPECIAL_KEY_BASE + 10;
 
 fn encode_modifiers(modifiers: crossterm::event::KeyModifiers) -> i32 {
     let mut result = 0;
@@ -182,21 +250,21 @@ fn encode_key_event(key_event: crossterm::event::KeyEvent) -> (i32, i32) {
     let modifiers = encode_modifiers(key_event.modifiers);
     let code = match key_event.code {
         KeyCode::Char(c) => c as i32,
-        KeyCode::Up => 1001,
-        KeyCode::Down => 1002,
-        KeyCode::Left => 1003,
-        KeyCode::Right => 1004,
+        KeyCode::Up => KEY_UP,
+        KeyCode::Down => KEY_DOWN,
+        KeyCode::Left => KEY_LEFT,
+        KeyCode::Right => KEY_RIGHT,
         KeyCode::Enter => 13,
         KeyCode::Esc => 27,
         KeyCode::Backspace => 127,
         KeyCode::Tab => 9,
-        KeyCode::Home => 1005,
-        KeyCode::End => 1006,
-        KeyCode::PageUp => 1007,
-        KeyCode::PageDown => 1008,
-        KeyCode::Insert => 1009,
-        KeyCode::Delete => 1010,
-        KeyCode::F(n) => 2000 + (n as i32),
+        KeyCode::Home => KEY_HOME,
+        KeyCode::End => KEY_END,
+        KeyCode::PageUp => KEY_PAGE_UP,
+        KeyCode::PageDown => KEY_PAGE_DOWN,
+        KeyCode::Insert => KEY_INSERT,
+        KeyCode::Delete => KEY_DELETE,
+        KeyCode::F(n) => FUNCTION_KEY_BASE + (n as i32),
         _ => 0,
     };
 
@@ -305,6 +373,71 @@ mod tests {
     }
 
     #[test]
+    fn test_display_width_handles_wide_and_supplementary_characters() {
+        for (text, expected_width) in [("日本", 4), ("😀", 2)] {
+            let result = unsafe { ecro_display_width(text.as_ptr(), text.len() as i32) };
+            assert_eq!(result, expected_width, "display width for {text:?}");
+        }
+    }
+
+    #[test]
+    fn test_display_width_returns_minus_one_for_invalid_input() {
+        let invalid_utf8 = [0xff];
+        assert_eq!(
+            unsafe { ecro_display_width(invalid_utf8.as_ptr(), invalid_utf8.len() as i32) },
+            -1
+        );
+
+        let text = "valid";
+        assert_eq!(unsafe { ecro_display_width(text.as_ptr(), -1) }, -1);
+        assert_eq!(unsafe { ecro_display_width(std::ptr::null(), 0) }, -1);
+    }
+
+    #[test]
+    fn test_prefix_utf16_length_respects_grapheme_boundaries() {
+        for (text, maximum_width, expected_length) in [
+            ("日本", 3, 1),
+            ("A😀B", 3, 3),
+            ("e\u{301}x", 1, 2),
+            ("👨‍👩‍👧‍👦x", 1, 0),
+        ] {
+            let result = unsafe {
+                ecro_prefix_utf16_length_for_width(text.as_ptr(), text.len() as i32, maximum_width)
+            };
+            assert_eq!(result, expected_length, "UTF-16 prefix length for {text:?}");
+        }
+    }
+
+    #[test]
+    fn test_prefix_utf16_length_returns_minus_one_for_invalid_input() {
+        let invalid_utf8 = [0xff];
+        assert_eq!(
+            unsafe {
+                ecro_prefix_utf16_length_for_width(
+                    invalid_utf8.as_ptr(),
+                    invalid_utf8.len() as i32,
+                    1,
+                )
+            },
+            -1
+        );
+
+        let text = "valid";
+        assert_eq!(
+            unsafe { ecro_prefix_utf16_length_for_width(text.as_ptr(), -1, 1) },
+            -1
+        );
+        assert_eq!(
+            unsafe { ecro_prefix_utf16_length_for_width(text.as_ptr(), text.len() as i32, -1) },
+            -1
+        );
+        assert_eq!(
+            unsafe { ecro_prefix_utf16_length_for_width(std::ptr::null(), 0, 1) },
+            -1
+        );
+    }
+
+    #[test]
     fn test_encode_control_slash() {
         let event = KeyEvent::new(KeyCode::Char('/'), KeyModifiers::CONTROL);
         let (code, modifiers) = encode_key_event(event);
@@ -353,5 +486,36 @@ mod tests {
         let (code, modifiers) = encode_key_event(event);
         assert_eq!(code, 'i' as i32);
         assert_eq!(modifiers, MOD_CONTROL);
+    }
+
+    #[test]
+    fn test_encode_function_key_outside_unicode_range() {
+        let event = KeyEvent::new(KeyCode::F(1), KeyModifiers::empty());
+        let (code, modifiers) = encode_key_event(event);
+        assert!(code > char::MAX as i32);
+        assert_eq!(modifiers, 0);
+    }
+
+    #[test]
+    fn test_encode_special_keys_outside_unicode_range() {
+        let key_codes = [
+            KeyCode::Up,
+            KeyCode::Down,
+            KeyCode::Left,
+            KeyCode::Right,
+            KeyCode::Home,
+            KeyCode::End,
+            KeyCode::PageUp,
+            KeyCode::PageDown,
+            KeyCode::Insert,
+            KeyCode::Delete,
+        ];
+
+        for key_code in key_codes {
+            let event = KeyEvent::new(key_code, KeyModifiers::empty());
+            let (code, modifiers) = encode_key_event(event);
+            assert!(code > char::MAX as i32, "{key_code:?} encoded as {code}");
+            assert_eq!(modifiers, 0);
+        }
     }
 }

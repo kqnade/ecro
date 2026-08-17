@@ -17,6 +17,16 @@
   (b/move-point-backward buf))
 
 
+(defn- code-point-column
+  [^String line offset]
+  (.codePointCount line 0 offset))
+
+
+(defn- column-offset
+  [^String line column]
+  (.offsetByCodePoints line 0 (min column (.codePointCount line 0 (count line)))))
+
+
 (defn next-line
   "Move point to the next line (C-n)."
   [buf]
@@ -24,14 +34,15 @@
         point (:point buf)
         current-line-col (b/point-to-line-column buf point)
         current-line (first current-line-col)
-        current-col (second current-line-col)
         lines (clojure.string/split text #"\n" -1)
+        current-line-text (nth lines current-line)
+        current-col (code-point-column current-line-text (second current-line-col))
         next-line-idx (inc current-line)]
     (if (< next-line-idx (count lines))
       (let [next-line-text (nth lines next-line-idx)
-            target-col (min current-col (count next-line-text))
+            target-offset (column-offset next-line-text current-col)
             new-point (reduce + (map (comp inc count) (take next-line-idx lines)))]
-        (assoc buf :point (+ new-point target-col)))
+        (assoc buf :point (+ new-point target-offset)))
       buf)))
 
 
@@ -42,14 +53,15 @@
         point (:point buf)
         current-line-col (b/point-to-line-column buf point)
         current-line (first current-line-col)
-        current-col (second current-line-col)
-        lines (clojure.string/split text #"\n" -1)]
+        lines (clojure.string/split text #"\n" -1)
+        current-line-text (nth lines current-line)
+        current-col (code-point-column current-line-text (second current-line-col))]
     (if (> current-line 0)
       (let [prev-line-idx (dec current-line)
             prev-line-text (nth lines prev-line-idx)
-            target-col (min current-col (count prev-line-text))
+            target-offset (column-offset prev-line-text current-col)
             new-point (reduce + (map (comp inc count) (take prev-line-idx lines)))]
-        (assoc buf :point (+ new-point target-col)))
+        (assoc buf :point (+ new-point target-offset)))
       buf)))
 
 
