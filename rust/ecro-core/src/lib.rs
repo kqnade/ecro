@@ -373,6 +373,71 @@ mod tests {
     }
 
     #[test]
+    fn test_display_width_handles_wide_and_supplementary_characters() {
+        for (text, expected_width) in [("日本", 4), ("😀", 2)] {
+            let result = unsafe { ecro_display_width(text.as_ptr(), text.len() as i32) };
+            assert_eq!(result, expected_width, "display width for {text:?}");
+        }
+    }
+
+    #[test]
+    fn test_display_width_returns_minus_one_for_invalid_input() {
+        let invalid_utf8 = [0xff];
+        assert_eq!(
+            unsafe { ecro_display_width(invalid_utf8.as_ptr(), invalid_utf8.len() as i32) },
+            -1
+        );
+
+        let text = "valid";
+        assert_eq!(unsafe { ecro_display_width(text.as_ptr(), -1) }, -1);
+        assert_eq!(unsafe { ecro_display_width(std::ptr::null(), 0) }, -1);
+    }
+
+    #[test]
+    fn test_prefix_utf16_length_respects_grapheme_boundaries() {
+        for (text, maximum_width, expected_length) in [
+            ("日本", 3, 1),
+            ("A😀B", 3, 3),
+            ("e\u{301}x", 1, 2),
+            ("👨‍👩‍👧‍👦x", 1, 0),
+        ] {
+            let result = unsafe {
+                ecro_prefix_utf16_length_for_width(text.as_ptr(), text.len() as i32, maximum_width)
+            };
+            assert_eq!(result, expected_length, "UTF-16 prefix length for {text:?}");
+        }
+    }
+
+    #[test]
+    fn test_prefix_utf16_length_returns_minus_one_for_invalid_input() {
+        let invalid_utf8 = [0xff];
+        assert_eq!(
+            unsafe {
+                ecro_prefix_utf16_length_for_width(
+                    invalid_utf8.as_ptr(),
+                    invalid_utf8.len() as i32,
+                    1,
+                )
+            },
+            -1
+        );
+
+        let text = "valid";
+        assert_eq!(
+            unsafe { ecro_prefix_utf16_length_for_width(text.as_ptr(), -1, 1) },
+            -1
+        );
+        assert_eq!(
+            unsafe { ecro_prefix_utf16_length_for_width(text.as_ptr(), text.len() as i32, -1) },
+            -1
+        );
+        assert_eq!(
+            unsafe { ecro_prefix_utf16_length_for_width(std::ptr::null(), 0, 1) },
+            -1
+        );
+    }
+
+    #[test]
     fn test_encode_control_slash() {
         let event = KeyEvent::new(KeyCode::Char('/'), KeyModifiers::CONTROL);
         let (code, modifiers) = encode_key_event(event);
