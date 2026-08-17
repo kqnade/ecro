@@ -35,17 +35,46 @@
   (update state :pattern str ch))
 
 
+(defn isearch-delete-char
+  "Remove the last character from the i-search pattern."
+  [state]
+  (update state :pattern
+          (fn [^String pattern]
+            (if (empty? pattern)
+              pattern
+              (subs pattern 0 (.offsetByCodePoints pattern (count pattern) -1))))))
+
+
 (defn isearch-execute
   "Execute i-search with current pattern. Returns updated buffer."
   [state buf]
   (let [pattern (:pattern state)
-        start-point (or (:start-point state) (:point buf))]
+        start-point (or (:start-point state) (:point buf))
+        anchor-point (:anchor-point state)
+        search-point (if (some? anchor-point)
+                       (if (= :backward (:direction state))
+                         (inc anchor-point)
+                         anchor-point)
+                       start-point)
+        fallback-point (or anchor-point start-point)]
     (if (seq pattern)
       (let [result (case (:direction state)
-                     :forward (search-forward (assoc buf :point start-point) pattern)
-                     :backward (search-backward (assoc buf :point start-point) pattern))]
-        (or result (assoc buf :point start-point)))
-      buf)))
+                     :forward (search-forward (assoc buf :point search-point) pattern)
+                     :backward (search-backward (assoc buf :point search-point) pattern))]
+        (or result (assoc buf :point fallback-point)))
+      (assoc buf :point fallback-point))))
+
+
+(defn isearch-repeat
+  "Repeat the current i-search from the current match in direction."
+  [state buf direction]
+  (let [pattern (:pattern state)
+        point (:point buf)
+        result (when (seq pattern)
+                 (case direction
+                   :forward (search-forward (assoc buf :point (inc point)) pattern)
+                   :backward (search-backward (assoc buf :point point) pattern)))]
+    (or result buf)))
 
 
 (defn isearch-cancel

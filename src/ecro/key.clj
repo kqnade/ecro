@@ -8,10 +8,17 @@
     [ecro.native :as native]
     [ecro.render :as render]
     [ecro.scroll :as scroll]
+    [ecro.search :as search]
     [ecro.skk.input :as skk-input]
     [ecro.skk.sources :as skk-sources]
     [ecro.skk.state :as skk-state]
     [ecro.state :as state]))
+
+
+(def control-modifier 1)
+
+
+(def alt-modifier 2)
 
 
 (def shift-modifier 4)
@@ -164,6 +171,75 @@
       :else state)))
 
 
+(defn- code-point-string
+  "Convert a valid Unicode code point to a string."
+  [key-code]
+  (when (Character/isValidCodePoint key-code)
+    (String. (Character/toChars key-code))))
+
+
+(defn- terminal-sentinel-key-code?
+  "Return true for non-character key codes reserved by the terminal adapter."
+  [key-code]
+  (or (<= 1001 key-code 1010)
+      (<= 2001 key-code 2255)))
+
+
+(defn- repeat-isearch
+  [editor-state direction]
+  (let [isearch (assoc (:isearch editor-state) :direction direction)
+        buf (search/isearch-repeat isearch
+                                   (:current-buffer editor-state)
+                                   direction)
+        isearch (assoc isearch :anchor-point (:point buf))]
+    (-> editor-state
+        (assoc :isearch isearch)
+        (state/assoc-current-buffer buf))))
+
+
+(defn- handle-isearch-key
+  "Handle a key event while incremental search is active."
+  [editor-state key-code modifiers]
+  (cond
+    (= key-code 13)
+    (dissoc editor-state :isearch)
+
+    (= key-code 27)
+    (let [buf (search/isearch-cancel (:isearch editor-state)
+                                     (:current-buffer editor-state))]
+      (-> editor-state
+          (dissoc :isearch)
+          (state/assoc-current-buffer buf)))
+
+    (= key-code 127)
+    (let [isearch (search/isearch-delete-char (:isearch editor-state))
+          buf (search/isearch-execute isearch (:current-buffer editor-state))]
+      (-> editor-state
+          (assoc :isearch isearch)
+          (state/assoc-current-buffer buf)))
+
+    (and (= key-code (int \s)) (= modifiers control-modifier))
+    (repeat-isearch editor-state :forward)
+
+    (and (= key-code (int \r)) (= modifiers control-modifier))
+    (repeat-isearch editor-state :backward)
+
+    (terminal-sentinel-key-code? key-code)
+    editor-state
+
+    (and (>= key-code 32)
+         (zero? (bit-and modifiers (bit-or control-modifier alt-modifier))))
+    (if-let [text (code-point-string key-code)]
+      (let [isearch (search/isearch-add-char (:isearch editor-state) text)
+            buf (search/isearch-execute isearch (:current-buffer editor-state))]
+        (-> editor-state
+            (assoc :isearch isearch)
+            (state/assoc-current-buffer buf)))
+      editor-state)
+
+    :else editor-state))
+
+
 (defn- skk-active?
   "Return true if SKK minor mode is active in the current buffer."
   [editor-state]
@@ -264,15 +340,17 @@
 (defn handle-key
   "Handle a key event and return updated state."
   [editor-state key-code modifiers]
-  (if (:minibuffer editor-state)
-    (handle-minibuffer-key editor-state key-code)
-    (let [key-str (key-name key-code modifiers)]
-      (if (and (skk-active? editor-state)
-               (not (seq (:key-sequence editor-state)))
-               (not (= "ESC" key-str)))
-        (or (skk-handle-key editor-state key-str key-code)
-            (handle-regular-key editor-state key-code modifiers))
-        (handle-regular-key editor-state key-code modifiers)))))
+  (if (:isearch editor-state)
+    (handle-isearch-key editor-state key-code modifiers)
+    (if (:minibuffer editor-state)
+      (handle-minibuffer-key editor-state key-code)
+      (let [key-str (key-name key-code modifiers)]
+        (if (and (skk-active? editor-state)
+                 (not (seq (:key-sequence editor-state)))
+                 (not (= "ESC" key-str)))
+          (or (skk-handle-key editor-state key-str key-code)
+              (handle-regular-key editor-state key-code modifiers))
+          (handle-regular-key editor-state key-code modifiers))))))
 
 
 (defn process-event

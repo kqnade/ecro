@@ -4,7 +4,8 @@
     [clojure.test :refer :all]
     [ecro.bindings :as bindings]
     [ecro.buffer :as b]
-    [ecro.key :as key]))
+    [ecro.key :as key]
+    [ecro.render :as render]))
 
 
 (deftest test-key-name-control-shift-and-control-slash
@@ -43,6 +44,131 @@
       (is (= [] (:key-sequence new-state)))
       (is (some? (:minibuffer new-state)))
       (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
+
+
+(deftest test-forward-incremental-search-integration
+  (testing "C-s searches as characters are typed and RET accepts the match"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          with-w (key/handle-key started (int \w) 0)
+          with-wo (key/handle-key with-w (int \o) 0)
+          accepted (key/handle-key with-wo 13 0)]
+      (is (= {:pattern "" :direction :forward :start-point 0}
+             (:isearch started)))
+      (is (= 6 (get-in with-w [:current-buffer :point])))
+      (is (= "wo" (get-in with-wo [:isearch :pattern])))
+      (is (= "I-search: wo" (render/status-line with-wo)))
+      (is (= 6 (get-in accepted [:current-buffer :point])))
+      (is (nil? (:isearch accepted))))))
+
+
+(deftest test-backward-incremental-search-integration
+  (testing "C-r searches backward as characters are typed"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "foo bar foo"
+                                        :point 11)
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \r) 1)
+          searched (key/handle-key started (int \b) 0)]
+      (is (= :backward (get-in started [:isearch :direction])))
+      (is (= "b" (get-in searched [:isearch :pattern])))
+      (is (= 4 (get-in searched [:current-buffer :point])))
+      (is (= "I-search backward: b" (render/status-line searched))))))
+
+
+(deftest test-incremental-search-backspace
+  (testing "BS removes the last query character and recomputes the match"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \w) 0)
+          cleared (key/handle-key searched 127 0)]
+      (is (= 6 (get-in searched [:current-buffer :point])))
+      (is (= "" (get-in cleared [:isearch :pattern])))
+      (is (= 0 (get-in cleared [:current-buffer :point]))))))
+
+
+(deftest test-incremental-search-cancel
+  (testing "ESC cancels search and restores the starting point"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world"
+                                        :point 2)
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \w) 0)
+          canceled (key/handle-key searched 27 0)]
+      (is (= 6 (get-in searched [:current-buffer :point])))
+      (is (= 2 (get-in canceled [:current-buffer :point])))
+      (is (nil? (:isearch canceled))))))
+
+
+(deftest test-incremental-search-non-bmp-character
+  (testing "a non-BMP code point can be added and removed as one character"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "a😀b")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started 0x1F600 0)
+          cleared (key/handle-key searched 127 0)]
+      (is (= "😀" (get-in searched [:isearch :pattern])))
+      (is (= 1 (get-in searched [:current-buffer :point])))
+      (is (= "" (get-in cleared [:isearch :pattern])))
+      (is (= 0 (get-in cleared [:current-buffer :point]))))))
+
+
+(deftest test-incremental-search-ignores-terminal-sentinel-codes
+  (testing "navigation and function key sentinels do not enter the query"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "hello world")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \w) 0)
+          after-specials (reduce #(key/handle-key %1 %2 0)
+                                 searched
+                                 [1001 1004 1005 1010 2001])]
+      (is (= "w" (get-in after-specials [:isearch :pattern])))
+      (is (= 6 (get-in after-specials [:current-buffer :point]))))))
+
+
+(deftest test-incremental-search-classifies-modifiers
+  (testing "Shift text is accepted while unrelated Ctrl and Alt chords are ignored"
+    (let [state {:current-buffer (assoc (b/make-buffer "test") :text "W")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          shifted (key/handle-key started (int \W) key/shift-modifier)
+          after-chords (-> shifted
+                           (key/handle-key (int \g) 1)
+                           (key/handle-key (int \x) 2))]
+      (is (= "W" (get-in after-chords [:isearch :pattern])))
+      (is (= 0 (get-in after-chords [:current-buffer :point]))))))
+
+
+(deftest test-incremental-search-repeat-controls
+  (testing "C-s and C-r repeat the query without entering command characters"
+    (let [state {:current-buffer (assoc (b/make-buffer "test")
+                                        :text "foo foo foo")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          started (key/handle-key state (int \s) 1)
+          searched (key/handle-key started (int \f) 0)
+          next-match (key/handle-key searched (int \s) 1)
+          refined (key/handle-key next-match (int \o) 0)
+          previous-match (key/handle-key refined (int \r) 1)]
+      (is (= 4 (get-in next-match [:current-buffer :point])))
+      (is (= 4 (get-in refined [:current-buffer :point])))
+      (is (= 0 (get-in previous-match [:current-buffer :point])))
+      (is (= "fo" (get-in previous-match [:isearch :pattern])))
+      (is (= :backward (get-in previous-match [:isearch :direction]))))))
 
 
 (deftest test-handle-key-inserts-non-ascii-character
