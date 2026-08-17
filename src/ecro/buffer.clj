@@ -10,7 +10,8 @@
    (make-buffer name {}))
   ([name opts]
    (mode/set-buffer-mode
-     {:name name
+     {:id (random-uuid)
+      :name name
       :text ""
       :point 0
       :mark nil

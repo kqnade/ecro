@@ -5,7 +5,10 @@
     [ecro.bindings :as bindings]
     [ecro.buffer :as b]
     [ecro.key :as key]
-    [ecro.render :as render]))
+    [ecro.native :as native]
+    [ecro.render :as render]
+    [ecro.state :as state]
+    [ecro.window :as window]))
 
 
 (deftest test-key-name-control-shift-and-control-slash
@@ -44,6 +47,73 @@
       (is (= [] (:key-sequence new-state)))
       (is (some? (:minibuffer new-state)))
       (is (= "Find file: " (get-in new-state [:minibuffer :prompt]))))))
+
+
+(deftest test-handle-key-deletes-selected-window
+  (testing "ESC 0 deletes the selected window and synchronizes current buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          scratch-buffer (:current-buffer editor-state)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          second-window (second (window/get-windows split-frame))
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          deleted-state (key/handle-key (assoc second-shows-other :key-sequence ["ESC"])
+                                        (int \0)
+                                        0)]
+      (is (= 1 (count (window/get-windows (:frame deleted-state)))))
+      (is (= (:id scratch-buffer) (:id (:current-buffer deleted-state))))
+      (is (= [] (:key-sequence deleted-state))))))
+
+
+(deftest test-handle-key-deletes-other-windows
+  (testing "ESC 1 keeps the selected window and its current buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          second-window (second (window/get-windows split-frame))
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          single-window-state (key/handle-key (assoc second-shows-other :key-sequence ["ESC"])
+                                              (int \1)
+                                              0)]
+      (is (= 1 (count (window/get-windows (:frame single-window-state)))))
+      (is (= (:id other-buffer) (:id (:current-buffer single-window-state))))
+      (is (= (:id other-buffer)
+             (:buffer-id (window/selected-window (:frame single-window-state)))))
+      (is (= [] (:key-sequence single-window-state))))))
+
+
+(deftest test-handle-key-selects-other-window
+  (testing "ESC o selects the next window and synchronizes current buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          scratch-buffer (:current-buffer editor-state)
+          other-buffer (b/make-buffer "other.txt")
+          frame (:frame editor-state)
+          split-frame (window/split-window-vertical frame (:root-window frame))
+          [first-window second-window] (window/get-windows split-frame)
+          state-with-split (-> editor-state
+                               (state/add-buffer other-buffer)
+                               (assoc :frame split-frame))
+          second-selected (state/select-window state-with-split second-window)
+          second-shows-other (state/assoc-current-buffer second-selected other-buffer)
+          first-selected (state/select-window second-shows-other first-window)
+          selected-state (key/handle-key (assoc first-selected :key-sequence ["ESC"])
+                                         (int \o)
+                                         0)]
+      (is (= (:id scratch-buffer) (:id (:current-buffer first-selected))))
+      (is (= (:id other-buffer) (:id (:current-buffer selected-state))))
+      (is (= (:id other-buffer)
+             (:buffer-id (window/selected-window (:frame selected-state)))))
+      (is (= [] (:key-sequence selected-state))))))
 
 
 (deftest test-forward-incremental-search-integration
@@ -254,3 +324,17 @@
       (is (= 0 (:mark buf)))
       (is (= 2 (:point buf)))
       (is (= "abc" (:text buf))))))
+
+
+(deftest test-process-event-keeps-selected-window-buffer-synchronized
+  (testing "scroll adjustment updates the selected window buffer"
+    (let [editor-state (state/initial-state bindings/default-keymap)
+          current-buffer (assoc (:current-buffer editor-state)
+                                :text "1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
+                                :point 15)
+          state-with-point (state/assoc-current-buffer editor-state current-buffer)
+          processed-state (with-redefs [native/get-terminal-size (constantly [80 6])]
+                            (key/process-event state-with-point nil))]
+      (is (= 3 (:scroll-line (:current-buffer processed-state))))
+      (is (= (:id (:current-buffer processed-state))
+             (:buffer-id (window/selected-window (:frame processed-state))))))))
