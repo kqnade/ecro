@@ -1,10 +1,14 @@
 (ns ecro.native
+  (:require
+    [clojure.java.io :as io])
   (:import
     (com.sun.jna
       Library
       Native
       Pointer
-      Structure)))
+      Structure)
+    (java.nio.charset
+      StandardCharsets)))
 
 
 (gen-class
@@ -39,18 +43,51 @@
             [ecro_enter_alternate_screen [] int]
             [ecro_leave_alternate_screen [] int]
             [ecro_get_terminal_size [ints ints] int]
+            [ecro_display_width [bytes int] int]
+            [ecro_prefix_utf16_length_for_width [bytes int int] int]
             [ecro_poll_event [] com.sun.jna.Pointer]
             [ecro_read_event [] com.sun.jna.Pointer]
             [ecro_free_event [com.sun.jna.Pointer] void]])
 
 
+(defn executable-path
+  "Return the path of the current JVM or native-image executable."
+  []
+  (let [^java.lang.ProcessHandle process (java.lang.ProcessHandle/current)
+        ^java.lang.ProcessHandle$Info info (.info process)
+        ^java.util.Optional command (.command info)]
+    (.orElse command nil)))
+
+
+(defn sibling-library-path
+  "Return the Rust library next to an executable when it exists."
+  [executable]
+  (when executable
+    (let [executable-file (.getAbsoluteFile (io/file executable))
+          library-file (io/file (.getParentFile executable-file)
+                                (System/mapLibraryName "ecro_core"))]
+      (when (.isFile library-file)
+        (.getAbsolutePath library-file)))))
+
+
+(defn load-native-library
+  "Load the required Rust sidecar or fail with an actionable diagnostic."
+  [library]
+  (try
+    (Native/loadLibrary library (Class/forName "ecro.native.IEcroNative"))
+    (catch LinkageError error
+      (throw
+        (IllegalStateException.
+          (str "Required Rust sidecar could not be loaded: " library
+               ". Place " (System/mapLibraryName "ecro_core")
+               " next to the ecro executable.")
+          error)))))
+
+
 (defonce ecro-lib
   (delay
-    (try
-      (Native/loadLibrary "ecro_core" (Class/forName "ecro.native.IEcroNative"))
-      (catch Exception e
-        (println "Warning: Could not load ecro_core library:" (.getMessage e))
-        nil))))
+    (load-native-library (or (sibling-library-path (executable-path))
+                             "ecro_core"))))
 
 
 (defn init
@@ -103,6 +140,26 @@
           height (int-array 1)]
       (when (= 0 (.ecro_get_terminal_size lib width height))
         [(aget width 0) (aget height 0)]))))
+
+
+(defn text-width
+  "Return the terminal-cell width of text, or nil when the adapter is unavailable."
+  [^String text]
+  (when-let [lib @ecro-lib]
+    (let [bytes (.getBytes text StandardCharsets/UTF_8)
+          width (.ecro_display_width lib bytes (alength bytes))]
+      (when-not (neg? width)
+        width))))
+
+
+(defn text-prefix-utf16-length-for-width
+  "Return the grapheme-aligned UTF-16 prefix length that fits in width."
+  [^String text width]
+  (when-let [lib @ecro-lib]
+    (let [bytes (.getBytes text StandardCharsets/UTF_8)
+          length (.ecro_prefix_utf16_length_for_width lib bytes (alength bytes) width)]
+      (when-not (neg? length)
+        length))))
 
 
 (defn decode-event-data

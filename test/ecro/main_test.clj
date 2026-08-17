@@ -3,8 +3,10 @@
     [clojure.java.io :as io]
     [clojure.test :refer :all]
     [ecro.buffer :as b]
+    [ecro.key :as key]
     [ecro.kill-ring :as kr]
-    [ecro.main :as main]))
+    [ecro.main :as main]
+    [ecro.native :as native]))
 
 
 (deftest test-lead-key-configurable
@@ -32,6 +34,24 @@
       (is (contains? state :key-sequence))
       (is (contains? state :keymap))
       (is (contains? state :current-buffer)))))
+
+
+(deftest smoke-test-only-checks-native-ffi
+  (testing "--smoke-test initializes and shuts down FFI without opening the terminal UI"
+    (let [calls (atom [])
+          record (fn [call result]
+                   (swap! calls conj call)
+                   result)]
+      (with-redefs [native/init #(record :init 0)
+                    native/shutdown #(record :shutdown 0)
+                    native/enable-raw-mode #(record :enable-raw-mode 0)
+                    native/disable-raw-mode #(record :disable-raw-mode 0)
+                    native/enter-alternate-screen #(record :enter-alternate-screen 0)
+                    native/leave-alternate-screen #(record :leave-alternate-screen 0)
+                    native/read-event (constantly nil)
+                    main/render (constantly nil)]
+        (main/-main "--smoke-test"))
+      (is (= [:init :shutdown] @calls)))))
 
 
 (deftest test-kill-line-integration
@@ -336,8 +356,7 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          ;; Shift+Right (code 1004, modifiers with Shift=4)
-          new-state (main/handle-key state 1004 5)]
+          new-state (main/handle-key state key/right-key-code 5)]
       (is (= 2 (:mark (:current-buffer new-state))))
       (is (= 3 (:point (:current-buffer new-state))))
       (is (= "l" (b/region-text (:current-buffer new-state)))))))
@@ -357,8 +376,8 @@
                  :keymap main/default-keymap
                  :key-sequence []
                  :kill-ring (kr/make-kill-ring)}
-          selected (main/handle-key state 1004 5)
-          moved (main/handle-key selected 1004 0)]
+          selected (main/handle-key state key/right-key-code 5)
+          moved (main/handle-key selected key/right-key-code 0)]
       (is (= 2 (:mark (:current-buffer selected))))
       (is (nil? (:mark (:current-buffer moved))))
       (is (= 4 (:point (:current-buffer moved)))))))

@@ -171,6 +171,35 @@
       (is (= :backward (get-in previous-match [:isearch :direction]))))))
 
 
+(deftest test-handle-key-inserts-non-ascii-character
+  (testing "a printable Unicode key inserts its character"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          new-state (key/handle-key state (int \日) 0)]
+      (is (= "日" (get-in new-state [:current-buffer :text])))
+      (is (= 1 (get-in new-state [:current-buffer :point]))))))
+
+
+(deftest test-handle-key-inserts-character-that-matched-old-up-key
+  (testing "U+03E9 is inserted instead of moving the cursor"
+    (let [state {:current-buffer (b/make-buffer "test")
+                 :keymap bindings/default-keymap
+                 :key-sequence []}
+          new-state (key/handle-key state 0x03e9 0)]
+      (is (= "ϩ" (get-in new-state [:current-buffer :text])))
+      (is (= 1 (get-in new-state [:current-buffer :point]))))))
+
+
+(deftest test-minibuffer-handles-supplementary-character-before-function-key
+  (testing "a printable supplementary key inserts while F1 is ignored"
+    (let [state {:minibuffer {:buffer (b/make-buffer " *minibuffer*")}}
+          emoji-state (key/handle-key state 0x1f600 0)
+          f1-state (key/handle-key emoji-state (inc Character/MAX_CODE_POINT) 0)]
+      (is (= "😀" (get-in f1-state [:minibuffer :buffer :text])))
+      (is (= 2 (get-in f1-state [:minibuffer :buffer :point]))))))
+
+
 (deftest test-minibuffer-switch-to-buffer
   (testing "minibuffer Enter switches to named buffer"
     (let [state {:minibuffer {:buffer {:text "other.clj"}
@@ -219,8 +248,8 @@
     (let [state {:current-buffer (assoc (b/make-buffer "test") :text "abc")
                  :keymap bindings/default-keymap
                  :key-sequence []}
-          state' (key/handle-key state 1004 key/shift-modifier)
-          state'' (key/handle-key state' 1004 key/shift-modifier)
+          state' (key/handle-key state key/right-key-code key/shift-modifier)
+          state'' (key/handle-key state' key/right-key-code key/shift-modifier)
           buf (:current-buffer state'')]
       (is (= 0 (:mark buf)))
       (is (= 2 (:point buf)))

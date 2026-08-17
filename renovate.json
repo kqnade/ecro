@@ -38,6 +38,7 @@
     }
   ],
   "includePaths": [
-    ".github/workflows/**"
+    ".github/workflows/**",
+    "mise.toml"
   ]
 }

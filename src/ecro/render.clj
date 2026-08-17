@@ -10,6 +10,104 @@
 (defonce screen-buffer (atom []))
 
 
+(defn- terminal-width
+  [text]
+  (or (native/text-width text)
+      (throw (IllegalStateException. "ecro_core is required to measure terminal text"))))
+
+
+(defn- terminal-prefix-length
+  [text width]
+  (or (native/text-prefix-utf16-length-for-width text width)
+      (throw (IllegalStateException. "ecro_core is required to truncate terminal text"))))
+
+
+(defn- ansi-csi-end
+  [^String text offset]
+  (when (and (< (inc offset) (count text))
+             (= 0x1b (int (.charAt text offset)))
+             (= \[ (.charAt text (inc offset))))
+    (loop [index (+ offset 2)]
+      (when (< index (count text))
+        (let [ch (int (.charAt text index))]
+          (if (<= 0x40 ch 0x7e)
+            (inc index)
+            (recur (inc index))))))))
+
+
+(defn- sgr-active-after
+  [^String text offset end active?]
+  (if (= \m (.charAt text (dec end)))
+    (let [sequence (subs text offset end)]
+      (not (or (= sequence "\033[m")
+               (= sequence "\033[0m"))))
+    active?))
+
+
+(defn- plain-segment-end
+  [^String text offset stop-at-tab?]
+  (loop [index offset]
+    (if (or (>= index (count text))
+            (ansi-csi-end text index)
+            (and stop-at-tab? (= \tab (.charAt text index))))
+      index
+      (recur (inc index)))))
+
+
+(defn display-width
+  "Return the number of terminal cells occupied by text."
+  [^String text]
+  (loop [offset 0
+         width 0]
+    (if (< offset (count text))
+      (if-let [ansi-end (ansi-csi-end text offset)]
+        (recur ansi-end width)
+        (let [segment-end (plain-segment-end text offset false)
+              segment (subs text offset segment-end)]
+          (recur segment-end (+ width (terminal-width segment)))))
+      width)))
+
+
+(defn- truncate-to-width
+  [^String text width]
+  (let [result (StringBuilder.)]
+    (loop [offset 0
+           current-width 0
+           sgr-active? false]
+      (if (< offset (count text))
+        (if-let [ansi-end (ansi-csi-end text offset)]
+          (do
+            (.append result (subs text offset ansi-end))
+            (recur ansi-end
+                   current-width
+                   (sgr-active-after text offset ansi-end sgr-active?)))
+          (let [segment-end (plain-segment-end text offset false)
+                segment (subs text offset segment-end)
+                segment-width (terminal-width segment)
+                next-width (+ current-width segment-width)]
+            (if (<= next-width width)
+              (do
+                (.append result segment)
+                (recur segment-end next-width sgr-active?))
+              (do
+                (let [prefix-length (terminal-prefix-length segment (- width current-width))]
+                  (.append result (subs segment 0 prefix-length)))
+                (when sgr-active?
+                  (.append result "\033[0m"))
+                (str result)))))
+        (do
+          (when sgr-active?
+            (.append result "\033[0m"))
+          (str result))))))
+
+
+(defn- fit-to-width
+  [text width]
+  (let [truncated (truncate-to-width text width)
+        padding (- width (display-width truncated))]
+    (str truncated (apply str (repeat padding " ")))))
+
+
 (defn reset-screen-buffer!
   "Force the next render to redraw all lines."
   []
@@ -18,21 +116,24 @@
 
 (defn expand-tabs
   "Expand tab characters to spaces."
-  [line tab-width]
-  (loop [chars (seq line)
-         col 0
-         result ""]
-    (if (seq chars)
-      (let [ch (first chars)]
-        (if (= ch \tab)
-          (let [spaces (- tab-width (mod col tab-width))]
-            (recur (rest chars)
-                   (+ col spaces)
-                   (str result (apply str (repeat spaces " ")))))
-          (recur (rest chars)
-                 (inc col)
-                 (str result ch))))
-      result)))
+  [^String line tab-width]
+  (let [result (StringBuilder.)]
+    (loop [offset 0
+           col 0]
+      (if (< offset (count line))
+        (if-let [ansi-end (ansi-csi-end line offset)]
+          (do
+            (.append result (subs line offset ansi-end))
+            (recur ansi-end col))
+          (if (= \tab (.charAt line offset))
+            (let [spaces (- tab-width (mod col tab-width))]
+              (.append result (apply str (repeat spaces " ")))
+              (recur (inc offset) (+ col spaces)))
+            (let [segment-end (plain-segment-end line offset true)
+                  segment (subs line offset segment-end)]
+              (.append result segment)
+              (recur segment-end (+ col (terminal-width segment))))))
+        (str result)))))
 
 
 (defn update-screen-line
@@ -40,7 +141,7 @@
   [y old-line new-line width]
   (let [old (or old-line "")
         expanded (expand-tabs new-line 8)
-        new (subs (format (str "%-" width "s") expanded) 0 width)]
+        new (fit-to-width expanded width)]
     (when (not= old new)
       (print (str "\033[" (inc y) ";1H" new)))))
 
@@ -49,7 +150,7 @@
   "Return the exact rendered line stored in the diff buffer."
   [line width tab-width]
   (let [expanded (expand-tabs line tab-width)]
-    (subs (format (str "%-" width "s") expanded) 0 width)))
+    (fit-to-width expanded width)))
 
 
 (defn status-line
@@ -103,9 +204,8 @@
           before (subs line 0 rel-start)
           inside (subs line rel-start rel-end)
           after (subs line rel-end)
-          rendered (str before "\033[7m" inside "\033[0m" after)
-          expanded (expand-tabs rendered tab-width)]
-      (subs (format (str "%-" width "s") expanded) 0 width))
+          rendered (str before "\033[7m" inside "\033[0m" after)]
+      (screen-line rendered width tab-width))
     (screen-line line width tab-width)))
 
 
@@ -150,7 +250,7 @@
           line-start (reduce + (map #(inc (count %)) (take line-num lines)))
           col-in-line (- point line-start)
           line-prefix (subs line-text 0 (max 0 (min col-in-line (count line-text))))
-          visual-col (count (expand-tabs line-prefix tab-width))
+          visual-col (display-width (expand-tabs line-prefix tab-width))
           screen-row (- line-num scroll-line)]
       (print (str "\033[" (inc (max 0 screen-row)) ";" (inc visual-col) "H\033[?25h")))
     (flush)

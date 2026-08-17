@@ -115,6 +115,17 @@
       (is (= 1 (:point buf))))))
 
 
+(deftest test-vertical-movement-preserves-supplementary-character-boundaries
+  (testing "C-n and C-p keep point at code point columns"
+    (let [buf (assoc (b/make-buffer "test")
+                     :text "a\n😀x"
+                     :point 1)
+          next-line (core/next-line buf)
+          previous-line (core/previous-line next-line)]
+      (is (= 4 (:point next-line)))
+      (is (= 1 (:point previous-line))))))
+
+
 (deftest test-move-beginning-of-line
   (testing "C-a moves to beginning of line"
     (let [buf (-> (b/make-buffer "test")
