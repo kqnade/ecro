@@ -8,8 +8,10 @@
     [ecro.mode :as mode]
     [ecro.notification :as notification]
     [ecro.scroll :as scroll]
+    [ecro.search :as search]
     [ecro.state :as state]
-    [ecro.undo :as undo]))
+    [ecro.undo :as undo]
+    [ecro.window :as window]))
 
 
 (defn- save-buffer
@@ -57,8 +59,44 @@
              :minibuffer (ecro.minibuffer/prompt-for "Write file: " :write-file)
              :key-sequence [])
 
+      (= command :isearch-forward)
+      (assoc editor-state
+             :isearch (assoc (search/make-isearch :forward)
+                             :start-point (:point buf))
+             :key-sequence [])
+
+      (= command :isearch-backward)
+      (assoc editor-state
+             :isearch (assoc (search/make-isearch :backward)
+                             :start-point (:point buf))
+             :key-sequence [])
+
       (= command :list-buffers)
       (state/list-buffers editor-state)
+
+      (= command :delete-window)
+      (let [selected-window (some-> (:frame editor-state) window/selected-window)
+            updated-state (if selected-window
+                            (state/delete-window editor-state selected-window)
+                            editor-state)]
+        (assoc updated-state :kill-ring kill-ring :key-sequence []))
+
+      (= command :delete-other-windows)
+      (let [selected-window (some-> (:frame editor-state) window/selected-window)
+            updated-state (if selected-window
+                            (state/delete-other-windows editor-state selected-window)
+                            editor-state)]
+        (assoc updated-state :kill-ring kill-ring :key-sequence []))
+
+      (= command :other-window)
+      (let [frame (:frame editor-state)
+            selected-window (some-> frame window/selected-window)
+            target-window (when selected-window
+                            (window/other-window frame selected-window))
+            updated-state (if target-window
+                            (state/select-window editor-state target-window)
+                            editor-state)]
+        (assoc updated-state :kill-ring kill-ring :key-sequence []))
 
       (= command :toggle-skk)
       (let [buf (:current-buffer editor-state)

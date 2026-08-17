@@ -10,7 +10,8 @@
    (make-buffer name {}))
   ([name opts]
    (mode/set-buffer-mode
-     {:name name
+     {:id (random-uuid)
+      :name name
       :text ""
       :point 0
       :mark nil
@@ -47,14 +48,25 @@
                             :point point})))
 
 
+(defn- next-character-offset
+  [^String text point]
+  (+ point (Character/charCount (.codePointAt text point))))
+
+
+(defn- previous-character-offset
+  [^String text point]
+  (- point (Character/charCount (.codePointBefore text point))))
+
+
 (defn delete-char-forward
   "Delete the character at the current point."
   [buf]
   (let [point (:point buf)
         text (:text buf)]
     (if (< point (count text))
-      (let [deleted-char (get text point)
-            new-buf (assoc buf :text (str (subs text 0 point) (subs text (inc point))))]
+      (let [end (next-character-offset text point)
+            deleted-char (subs text point end)
+            new-buf (assoc buf :text (str (subs text 0 point) (subs text end)))]
         (undo/record-operation new-buf {:type :delete
                                         :char deleted-char
                                         :point point}))
@@ -80,13 +92,14 @@
   (let [point (:point buf)]
     (if (> point 0)
       (let [text (:text buf)
-            deleted-char (get text (dec point))
+            start (previous-character-offset text point)
+            deleted-char (subs text start point)
             new-buf (assoc buf
-                           :text (str (subs text 0 (dec point)) (subs text point))
-                           :point (dec point))]
+                           :text (str (subs text 0 start) (subs text point))
+                           :point start)]
         (undo/record-operation new-buf {:type :delete
                                         :char deleted-char
-                                        :point (dec point)}))
+                                        :point start}))
       buf)))
 
 
@@ -129,16 +142,17 @@
   (let [point (:point buf)
         text (:text buf)]
     (if (< point (count text))
-      (assoc buf :point (inc point))
+      (assoc buf :point (next-character-offset text point))
       buf)))
 
 
 (defn move-point-backward
   "Move point backward by one character if not at beginning."
   [buf]
-  (let [point (:point buf)]
+  (let [point (:point buf)
+        text (:text buf)]
     (if (> point 0)
-      (assoc buf :point (dec point))
+      (assoc buf :point (previous-character-offset text point))
       buf)))
 
 

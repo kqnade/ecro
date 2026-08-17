@@ -9,7 +9,7 @@
   (testing "window creation with buffer"
     (let [buf (b/make-buffer "test")
           win (w/make-window buf)]
-      (is (= buf (:buffer win)))
+      (is (= (:id buf) (:buffer-id win)))
       (is (= 0 (:top win)))
       (is (= 0 (:left win)))
       (is (= 24 (:height win)))
@@ -23,7 +23,8 @@
           frame (w/make-frame win)]
       (is (= 24 (:height frame)))
       (is (= 80 (:width frame)))
-      (is (= win (:root-window frame))))))
+      (is (= win (:root-window frame)))
+      (is (= win (w/selected-window frame))))))
 
 
 (deftest test-vertical-split
@@ -37,6 +38,15 @@
       (is (= 40 (:width (first (:children (:root-window new-frame)))))))))
 
 
+(deftest test-vertical-split-accepts-stale-handle
+  (testing "vertical split identifies its target by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          stale-window (assoc (:root-window frame) :top 99)
+          split-frame (w/split-window-vertical frame stale-window)]
+      (is (= 2 (count (w/get-windows split-frame)))))))
+
+
 (deftest test-horizontal-split
   (testing "splitting window horizontally creates two windows stacked"
     (let [buf (b/make-buffer "test")
@@ -46,6 +56,15 @@
       (is (= 2 (count (w/get-windows new-frame))))
       (is (= 24 (:height (:root-window new-frame))))
       (is (= 12 (:height (first (:children (:root-window new-frame)))))))))
+
+
+(deftest test-horizontal-split-accepts-stale-handle
+  (testing "horizontal split identifies its target by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          stale-window (assoc (:root-window frame) :top 99)
+          split-frame (w/split-window-horizontal frame stale-window)]
+      (is (= 2 (count (w/get-windows split-frame)))))))
 
 
 (deftest test-split-non-root-window-returns-unchanged
@@ -73,14 +92,46 @@
       (is (= (first wins) (w/prev-window frame2 (second wins)))))))
 
 
+(deftest test-next-window-accepts-stale-handle
+  (testing "next-window identifies its starting point by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          stale-window (assoc (first (w/get-windows split-frame)) :top 99)
+          expected-window (second (w/get-windows split-frame))]
+      (is (= (:id expected-window)
+             (:id (w/next-window split-frame stale-window)))))))
+
+
+(deftest test-prev-window-accepts-stale-handle
+  (testing "prev-window identifies its starting point by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          stale-window (assoc (second (w/get-windows split-frame)) :top 99)
+          expected-window (first (w/get-windows split-frame))]
+      (is (= (:id expected-window)
+             (:id (w/prev-window split-frame stale-window)))))))
+
+
+(deftest test-select-window
+  (testing "selecting a window updates the frame selection"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          target-window (second (w/get-windows split-frame))
+          selected-frame (w/select-window split-frame target-window)]
+      (is (= target-window (w/selected-window selected-frame))))))
+
+
 (deftest test-window-buffer-assignment
   (testing "assigning different buffers to windows"
     (let [buf1 (b/make-buffer "buffer1")
           buf2 (b/make-buffer "buffer2")
           win1 (w/make-window buf1)
           win2 (w/make-window buf2)]
-      (is (= "buffer1" (:name (:buffer win1))))
-      (is (= "buffer2" (:name (:buffer win2)))))))
+      (is (= (:id buf1) (:buffer-id win1)))
+      (is (= (:id buf2) (:buffer-id win2))))))
 
 
 (deftest test-delete-window
@@ -93,6 +144,26 @@
       (is (= 1 (count (w/get-windows deleted)))))))
 
 
+(deftest test-delete-window-accepts-stale-handle
+  (testing "delete-window identifies its target by stable window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          stale-target (assoc (first (w/get-windows split-frame)) :top 99)
+          deleted-frame (w/delete-window split-frame stale-target)]
+      (is (= 1 (count (w/get-windows deleted-frame)))))))
+
+
+(deftest test-delete-only-window-does-not-restore-stale-handle
+  (testing "delete-window keeps the current tree value when it cannot remove the last window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          current-window (:root-window frame)
+          stale-window (assoc current-window :top 99)
+          unchanged-frame (w/delete-window frame stale-window)]
+      (is (= current-window (:root-window unchanged-frame))))))
+
+
 (deftest test-delete-other-windows
   (testing "delete-other-windows keeps only the given window"
     (let [buf (b/make-buffer "test")
@@ -101,10 +172,22 @@
           wins (w/get-windows split-frame)
           kept (w/delete-other-windows split-frame (second wins))]
       (is (= 1 (count (w/get-windows kept))))
-      (is (= "*new*" (-> kept :root-window :buffer :name)))
+      (is (= (:id buf) (-> kept :root-window :buffer-id)))
       (is (= 80 (-> kept :root-window :width)))
       (is (= 24 (-> kept :root-window :height)))
       (is (nil? (-> kept :root-window :parent))))))
+
+
+(deftest test-delete-other-windows-accepts-stale-handle
+  (testing "delete-other-windows keeps the current tree value identified by window ID"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          current-target (second (w/get-windows split-frame))
+          stale-target (assoc current-target :buffer-id (random-uuid))
+          kept-frame (w/delete-other-windows split-frame stale-target)]
+      (is (= (:buffer-id current-target)
+             (:buffer-id (:root-window kept-frame)))))))
 
 
 (deftest test-other-window
@@ -127,3 +210,41 @@
       (is (= 40 (:height resized)))
       (is (= 100 (:width (:root-window resized))))
       (is (= 40 (:height (:root-window resized)))))))
+
+
+(deftest test-frame-resize-updates-vertical-split-layout
+  (testing "resizing a vertical split updates child dimensions and positions"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          resized-frame (w/resize-frame split-frame 100 40)
+          [left-window right-window] (w/get-windows resized-frame)]
+      (is (= [50 50] (mapv :width [left-window right-window])))
+      (is (= [40 40] (mapv :height [left-window right-window])))
+      (is (= [0 50] (mapv :left [left-window right-window])))
+      (is (= [0 0] (mapv :top [left-window right-window]))))))
+
+
+(deftest test-frame-resize-updates-horizontal-split-layout
+  (testing "resizing a horizontal split updates child dimensions and positions"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-horizontal frame (:root-window frame))
+          resized-frame (w/resize-frame split-frame 100 40)
+          [top-window bottom-window] (w/get-windows resized-frame)]
+      (is (= [100 100] (mapv :width [top-window bottom-window])))
+      (is (= [20 20] (mapv :height [top-window bottom-window])))
+      (is (= [0 0] (mapv :left [top-window bottom-window])))
+      (is (= [0 20] (mapv :top [top-window bottom-window]))))))
+
+
+(deftest test-frame-resize-preserves-selected-window
+  (testing "resizing a split frame preserves its selected window"
+    (let [buf (b/make-buffer "test")
+          frame (w/make-frame (w/make-window buf 80 24))
+          split-frame (w/split-window-vertical frame (:root-window frame))
+          target-window (second (w/get-windows split-frame))
+          selected-frame (w/select-window split-frame target-window)
+          resized-frame (w/resize-frame selected-frame 100 40)]
+      (is (= (:id target-window)
+             (:id (w/selected-window resized-frame)))))))

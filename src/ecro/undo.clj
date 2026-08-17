@@ -29,10 +29,11 @@
                          (update :undo-stack pop)
                          (update :redo-stack conj op)))
       :delete (let [op-point (:point op)
-                    ch (:char op)]
+                    ch (:char op)
+                    char-length (count (str ch))]
                 (-> buf
                     (assoc :text (str (subs text 0 op-point) ch (subs text op-point))
-                           :point (inc op-point))
+                           :point (+ op-point char-length))
                     (update :undo-stack pop)
                     (update :redo-stack conj op)))
       :delete-text (let [op-point (:point op)
@@ -66,9 +67,10 @@
                                 :point (+ op-point (count txt)))
                          (update :redo-stack pop)
                          (update :undo-stack conj op)))
-      :delete (let [op-point (:point op)]
+      :delete (let [op-point (:point op)
+                    char-length (count (str (:char op)))]
                 (-> buf
-                    (assoc :text (str (subs text 0 op-point) (subs text (inc op-point)))
+                    (assoc :text (str (subs text 0 op-point) (subs text (+ op-point char-length)))
                            :point op-point)
                     (update :redo-stack pop)
                     (update :undo-stack conj op)))
