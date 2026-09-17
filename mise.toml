@@ -1,6 +1,6 @@
 [tools]
 cljstyle = "0.17.642"
-clojure = "1.12.5.1664"
+clojure = "1.12.6.1673"
 graalvm = "25.0.2"
 java = "26.0.1"
 rust = "1.98.0"
